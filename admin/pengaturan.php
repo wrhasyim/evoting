@@ -13,12 +13,110 @@ if (!isset($_SESSION['admin_logged_in'])) {
 $pesan_notifikasi = '';
 $id_admin = $_SESSION['id_admin'];
 
-// 2. MENGAMBIL DATA ADMIN SAAT INI
-$stmt = $pdo->prepare("SELECT username, nama_lengkap FROM admin WHERE id_admin = ?");
-$stmt->execute([$id_admin]);
-$data_admin = $stmt->fetch();
+// ==========================================
+// FITUR: EXPORT DATABASE (BACKUP)
+// ==========================================
+if (isset($_POST['export_db'])) {
+    $tables = [];
+    $stmt = $pdo->query("SHOW TABLES");
+    while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
+        $tables[] = $row[0];
+    }
 
-// 3. PROSES PEMBARUAN PROFIL & PASSWORD
+    $sql_dump = "-- E-Voting Database Backup\n";
+    $sql_dump .= "-- Waktu Backup: " . date('Y-m-d H:i:s') . "\n\n";
+    $sql_dump .= "SET FOREIGN_KEY_CHECKS = 0;\n\n";
+
+    foreach ($tables as $table) {
+        $stmt = $pdo->query("SHOW CREATE TABLE $table");
+        $row = $stmt->fetch(PDO::FETCH_NUM);
+        $sql_dump .= "DROP TABLE IF EXISTS $table;\n";
+        $sql_dump .= $row[1] . ";\n\n";
+
+        $stmt = $pdo->query("SELECT * FROM $table");
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if (count($rows) > 0) {
+            $sql_dump .= "INSERT INTO $table VALUES \n";
+            $values = [];
+            foreach ($rows as $row_data) {
+                $row_values = [];
+                foreach ($row_data as $val) {
+                    if ($val === null) {
+                        $row_values[] = "NULL";
+                    } else {
+                        $row_values[] = $pdo->quote($val);
+                    }
+                }
+                $values[] = "(" . implode(", ", $row_values) . ")";
+            }
+            $sql_dump .= implode(",\n", $values) . ";\n\n";
+        }
+    }
+    
+    $sql_dump .= "SET FOREIGN_KEY_CHECKS = 1;\n";
+
+    header('Content-Type: application/sql');
+    header('Content-Disposition: attachment; filename="backup_evoting_' . date('Y_m_d_His') . '.sql"');
+    echo $sql_dump;
+    exit; 
+}
+
+// ==========================================
+// FITUR: IMPORT DATABASE (RESTORE)
+// ==========================================
+if (isset($_POST['import_db'])) {
+    if (isset($_FILES['file_sql']) && $_FILES['file_sql']['error'] == 0) {
+        $file_tmp = $_FILES['file_sql']['tmp_name'];
+        $sql_contents = file_get_contents($file_tmp);
+        
+        try {
+            $pdo->exec($sql_contents);
+            $pesan_notifikasi = "<div class='alert alert-success'><i class='fas fa-check-circle me-2'></i>Database berhasil di-restore dari file cadangan!</div>";
+        } catch (PDOException $e) {
+            $pesan_notifikasi = "<div class='alert alert-danger'><i class='fas fa-exclamation-triangle me-2'></i>Gagal melakukan restore: " . $e->getMessage() . "</div>";
+        }
+    } else {
+        $pesan_notifikasi = "<div class='alert alert-danger'>Pilih file .sql yang valid terlebih dahulu.</div>";
+    }
+}
+
+// ==========================================
+// FITUR BARU: RESET TOTAL SISTEM
+// ==========================================
+if (isset($_POST['reset_total'])) {
+    try {
+        // Matikan sementara pengecekan relasi agar tidak error
+        $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
+        
+        // Daftar tabel yang akan dikosongkan (tanpa menyentuh tabel admin)
+        $tabel_direset = [
+            'suara_masuk', 
+            'riwayat_pilih', 
+            'kandidat', 
+            'anggota_eskul', 
+            'siswa', 
+            'eskul', 
+            'periode'
+        ];
+
+        foreach ($tabel_direset as $tabel) {
+            $pdo->exec("DELETE FROM $tabel;"); // Hapus isi datanya
+            $pdo->exec("ALTER TABLE $tabel AUTO_INCREMENT = 1;"); // Kembalikan ID menjadi 1
+        }
+        
+        // Hidupkan kembali pengecekan relasi
+        $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
+        
+        $pesan_notifikasi = "<div class='alert alert-success fw-bold'><i class='fas fa-check-circle me-2'></i>Sistem berhasil di-reset total! Semua data telah dikosongkan dengan bersih.</div>";
+    } catch (PDOException $e) {
+        $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;"); // Pastikan relasi hidup kembali jika terjadi error
+        $pesan_notifikasi = "<div class='alert alert-danger'><i class='fas fa-exclamation-triangle me-2'></i>Gagal mereset sistem: " . $e->getMessage() . "</div>";
+    }
+}
+
+// ==========================================
+// PROSES PEMBARUAN PROFIL & PASSWORD
+// ==========================================
 if (isset($_POST['simpan_pengaturan'])) {
     $nama_baru = trim($_POST['nama_lengkap']);
     $username_baru = trim($_POST['username']);
@@ -26,46 +124,36 @@ if (isset($_POST['simpan_pengaturan'])) {
     $password_baru = $_POST['password_baru'];
     $konfirmasi_password = $_POST['konfirmasi_password'];
 
-    // Ambil password hash lama dari database untuk verifikasi
     $stmt_pass = $pdo->prepare("SELECT password FROM admin WHERE id_admin = ?");
     $stmt_pass->execute([$id_admin]);
     $hash_lama = $stmt_pass->fetchColumn();
 
-    // Verifikasi password lama
     if (password_verify($password_lama, $hash_lama)) {
-        
-        // Skenario A: Admin juga ingin mengganti password
         if (!empty($password_baru)) {
             if ($password_baru === $konfirmasi_password) {
-                // Enkripsi password baru
                 $hash_baru = password_hash($password_baru, PASSWORD_DEFAULT);
-                
                 $update = $pdo->prepare("UPDATE admin SET nama_lengkap = ?, username = ?, password = ? WHERE id_admin = ?");
                 $update->execute([$nama_baru, $username_baru, $hash_baru, $id_admin]);
-                
                 $pesan_notifikasi = "<div class='alert alert-success'>Profil dan Password berhasil diperbarui!</div>";
-                
-                // Perbarui sesi
                 $_SESSION['nama_lengkap'] = $nama_baru;
             } else {
                 $pesan_notifikasi = "<div class='alert alert-danger'>Gagal: Password baru dan konfirmasi tidak cocok.</div>";
             }
-        } 
-        // Skenario B: Admin HANYA ingin mengganti Nama/Username (Password baru dikosongkan)
-        else {
+        } else {
             $update = $pdo->prepare("UPDATE admin SET nama_lengkap = ?, username = ? WHERE id_admin = ?");
             $update->execute([$nama_baru, $username_baru, $id_admin]);
-            
             $pesan_notifikasi = "<div class='alert alert-success'>Profil berhasil diperbarui!</div>";
-            
-            // Perbarui sesi
             $_SESSION['nama_lengkap'] = $nama_baru;
         }
-        
     } else {
         $pesan_notifikasi = "<div class='alert alert-danger'>Gagal: Password saat ini (lama) yang Anda masukkan salah.</div>";
     }
 }
+
+// Mengambil Data Admin Saat Ini
+$stmt = $pdo->prepare("SELECT username, nama_lengkap FROM admin WHERE id_admin = ?");
+$stmt->execute([$id_admin]);
+$data_admin = $stmt->fetch();
 ?>
 
 <!DOCTYPE html>
@@ -87,66 +175,112 @@ if (isset($_POST['simpan_pengaturan'])) {
         .sidebar a:hover, .sidebar .active { background-color: rgba(255,255,255,0.15); color: white; border-left: 5px solid #fff; }
         .content { margin-left: 260px; padding: 40px; }
         .top-header { background: white; padding: 15px 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
-        .form-container { background: white; border-radius: 15px; padding: 30px; box-shadow: 0 10px 20px rgba(0,0,0,0.04); max-width: 600px; }
+        .form-container { background: white; border-radius: 15px; padding: 30px; box-shadow: 0 10px 20px rgba(0,0,0,0.04); }
     </style>
 </head>
 <body>
 
-    <!-- MEMANGGIL SIDEBAR DARI FILE TERPISAH -->
+    <!-- MEMANGGIL SIDEBAR -->
     <?php include 'sidebar.php'; ?>
 
     <!-- KONTEN UTAMA -->
     <div class="content">
         <div class="top-header">
             <div>
-                <h4 class="m-0 fw-bold" style="color: #2c3e50;">Pengaturan Keamanan</h4>
-                <small class="text-muted">Kelola profil dan kata sandi administrator Anda.</small>
+                <h4 class="m-0 fw-bold" style="color: #2c3e50;">Pengaturan Sistem</h4>
+                <small class="text-muted">Kelola keamanan profil, manajemen cadangan, dan pembersihan data.</small>
             </div>
         </div>
 
         <?= $pesan_notifikasi; ?>
 
-        <div class="form-container border-top border-primary border-5">
-            <form method="POST" action="">
-                <h5 class="fw-bold mb-4 border-bottom pb-2">Data Profil</h5>
-                
-                <div class="mb-3">
-                    <label class="form-label fw-medium">Nama Lengkap</label>
-                    <input type="text" name="nama_lengkap" class="form-control" value="<?= htmlspecialchars($data_admin['nama_lengkap']); ?>" required>
+        <!-- Membagi layar menjadi 2 kolom agar rapi -->
+        <div class="row">
+            
+            <!-- KOLOM KIRI: Profil & Kata Sandi -->
+            <div class="col-md-6 mb-4">
+                <div class="form-container border-top border-primary border-5 h-100">
+                    <form method="POST" action="">
+                        <h5 class="fw-bold mb-4 border-bottom pb-2"><i class="fas fa-user-shield me-2"></i> Keamanan Akun</h5>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Nama Lengkap</label>
+                            <input type="text" name="nama_lengkap" class="form-control" value="<?= htmlspecialchars($data_admin['nama_lengkap']); ?>" required>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-medium">Username Login</label>
+                            <input type="text" name="username" class="form-control" value="<?= htmlspecialchars($data_admin['username']); ?>" required>
+                        </div>
+
+                        <div class="alert alert-warning small">
+                            Kosongkan kolom <b>Password Baru</b> jika Anda hanya ingin mengubah Nama/Username.
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Password Baru</label>
+                            <input type="password" name="password_baru" class="form-control" placeholder="Masukkan kata sandi baru (Opsional)">
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-medium">Konfirmasi Password Baru</label>
+                            <input type="password" name="konfirmasi_password" class="form-control" placeholder="Ketik ulang kata sandi baru">
+                        </div>
+
+                        <div class="mb-4 p-3 bg-light rounded border border-danger">
+                            <label class="form-label fw-bold text-danger"><i class="fas fa-key me-2"></i>Otorisasi Perubahan</label>
+                            <p class="small text-muted mb-2">Masukkan kata sandi Anda saat ini untuk menyimpan pembaruan.</p>
+                            <input type="password" name="password_lama" class="form-control border-danger" placeholder="Password saat ini" required>
+                        </div>
+
+                        <button type="submit" name="simpan_pengaturan" class="btn btn-primary w-100 fw-bold py-2">
+                            <i class="fas fa-save me-2"></i> Simpan Profil
+                        </button>
+                    </form>
                 </div>
-                
-                <div class="mb-4">
-                    <label class="form-label fw-medium">Username Login</label>
-                    <input type="text" name="username" class="form-control" value="<?= htmlspecialchars($data_admin['username']); ?>" required>
+            </div>
+
+            <!-- KOLOM KANAN: Export, Import & Reset Database -->
+            <div class="col-md-6 mb-4">
+                <div class="form-container border-top border-success border-5 mb-4">
+                    <h5 class="fw-bold mb-4 border-bottom pb-2"><i class="fas fa-database me-2"></i> Manajemen Database</h5>
+                    <p class="text-muted small">Cegah kehilangan data dengan melakukan pencadangan (Backup) secara rutin. Anda dapat memulihkan (Restore) sistem menggunakan file .sql hasil unduhan Anda.</p>
+                    
+                    <!-- Form Export (Download) -->
+                    <form method="POST" action="" class="mb-4">
+                        <button type="submit" name="export_db" class="btn btn-success w-100 fw-bold py-3 shadow-sm">
+                            <i class="fas fa-download me-2 fs-5"></i> Download Backup Data (.sql)
+                        </button>
+                    </form>
+
+                    <!-- Form Import (Restore) -->
+                    <form method="POST" action="" enctype="multipart/form-data" class="bg-light p-3 border rounded">
+                        <h6 class="fw-bold text-dark"><i class="fas fa-upload me-2"></i> Restore Database</h6>
+                        <div class="mb-3">
+                            <label class="form-label small">Pilih File Cadangan (.sql)</label>
+                            <input type="file" name="file_sql" class="form-control" accept=".sql" required>
+                            <small class="text-danger mt-2 d-block"><b>Peringatan:</b> Melakukan restore akan menimpa seluruh data saat ini.</small>
+                        </div>
+                        <button type="submit" name="import_db" class="btn btn-outline-dark w-100 fw-bold" onclick="return confirm('Semua data saat ini akan terganti. Anda yakin?');">
+                            Mulai Restore
+                        </button>
+                    </form>
                 </div>
 
-                <h5 class="fw-bold mb-4 border-bottom pb-2">Ubah Kata Sandi</h5>
-                <div class="alert alert-warning small">
-                    Kosongkan kolom <b>Password Baru</b> jika Anda hanya ingin mengubah Nama/Username.
+                <!-- KOTAK RESET TOTAL -->
+                <div class="form-container border-top border-danger border-5 bg-white">
+                    <h5 class="fw-bold text-danger mb-3 border-bottom pb-2"><i class="fas fa-skull-crossbones me-2"></i> Reset Total Sistem</h5>
+                    <p class="text-muted small">Gunakan fitur ini untuk <b>mengosongkan seluruh isi sistem</b> (Data Tahun Ajaran, Eskul, Siswa, Kandidat, dan Suara Pemilih). Sangat berguna setelah melakukan uji coba menggunakan data <i>dummy</i>.</p>
+                    
+                    <form method="POST" action="">
+                        <button type="submit" name="reset_total" class="btn btn-danger w-100 fw-bold py-2 mt-2" onclick="return confirm('PERINGATAN KERAS!\n\nTindakan ini akan MENGHAPUS SEMUA DATA PERMANEN dari sistem (kecuali akun admin).\n\nApakah Anda benar-benar yakin ingin melakukan RESET TOTAL?');">
+                            <i class="fas fa-trash-alt me-2"></i> KOSONGKAN SEMUA DATA
+                        </button>
+                    </form>
                 </div>
+            </div>
 
-                <div class="mb-3">
-                    <label class="form-label fw-medium">Password Baru</label>
-                    <input type="password" name="password_baru" class="form-control" placeholder="Masukkan kata sandi baru (Opsional)">
-                </div>
-                
-                <div class="mb-4">
-                    <label class="form-label fw-medium">Konfirmasi Password Baru</label>
-                    <input type="password" name="konfirmasi_password" class="form-control" placeholder="Ketik ulang kata sandi baru">
-                </div>
-
-                <div class="mb-4 p-3 bg-light rounded border border-danger">
-                    <label class="form-label fw-bold text-danger"><i class="fas fa-shield-alt me-2"></i>Verifikasi Keamanan</label>
-                    <p class="small text-muted mb-2">Untuk menyimpan perubahan di atas, Anda wajib memasukkan kata sandi Anda yang sedang aktif saat ini.</p>
-                    <input type="password" name="password_lama" class="form-control border-danger" placeholder="Password saat ini" required>
-                </div>
-
-                <button type="submit" name="simpan_pengaturan" class="btn btn-primary w-100 fw-bold py-2">
-                    <i class="fas fa-save me-2"></i> Simpan Peraturan
-                </button>
-            </form>
         </div>
-
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

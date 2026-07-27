@@ -4,27 +4,31 @@
 session_start();
 require '../config/koneksi.php';
 
-// 1. PENGAMANAN HALAMAN
+// PENGAMANAN HALAMAN
 if (!isset($_SESSION['admin_logged_in'])) {
     header("Location: ../index.php");
     exit;
 }
 
-// 2. MENDAPATKAN PERIODE AKTIF
-$stmt_periode = $pdo->query("SELECT id_periode, nama_periode FROM periode WHERE status_aktif = 1 LIMIT 1");
-$periode_aktif = $stmt_periode->fetch();
+// Mengambil seluruh data siswa yang aktif, diurutkan berdasarkan kelas lalu nama
+$stmt = $pdo->query("SELECT nis, nama_siswa, kelas, pin FROM siswa WHERE status_aktif = 1 ORDER BY kelas ASC, nama_siswa ASC");
+$data_siswa = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-if (!$periode_aktif) {
-    die("<h3>Gagal memuat data: Belum ada Tahun Ajaran yang diaktifkan.</h3>");
+if (count($data_siswa) == 0) {
+    die("<h3 style='text-align:center; font-family:sans-serif; margin-top:50px;'>Belum ada data siswa untuk dicetak.</h3>");
 }
 
-$id_periode_aktif = $periode_aktif['id_periode'];
-$nama_periode_aktif = $periode_aktif['nama_periode'];
-
-// 3. MENGAMBIL DATA SISWA UNTUK PERIODE AKTIF
-$stmt_siswa = $pdo->prepare("SELECT nis, nama_siswa, kelas, pin FROM siswa WHERE id_periode = ? AND status_aktif = 1 ORDER BY kelas ASC, nama_siswa ASC");
-$stmt_siswa->execute([$id_periode_aktif]);
-$data_siswa = $stmt_siswa->fetchAll();
+// LOGIKA PENGELOMPOKAN: Memecah data tunggal menjadi kelompok per kelas
+$data_per_kelas = [];
+foreach ($data_siswa as $siswa) {
+    $kelas = $siswa['kelas'];
+    // Jika array untuk kelas ini belum ada, buatkan
+    if (!isset($data_per_kelas[$kelas])) {
+        $data_per_kelas[$kelas] = [];
+    }
+    // Masukkan data siswa ke dalam array kelasnya
+    $data_per_kelas[$kelas][] = $siswa;
+}
 ?>
 
 <!DOCTYPE html>
@@ -33,77 +37,127 @@ $data_siswa = $stmt_siswa->fetchAll();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cetak PIN Pemilih - E-Voting</title>
-    <!-- Kita tetap menggunakan Bootstrap agar tabel rapi, tetapi menambahkan CSS khusus print -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        body { font-family: Arial, sans-serif; background-color: #fff; padding: 20px; }
-        .kop-surat { text-align: center; border-bottom: 3px solid #000; padding-bottom: 15px; margin-bottom: 20px; }
-        .kop-surat h2 { margin: 0; font-weight: bold; text-transform: uppercase; }
-        .kop-surat p { margin: 5px 0 0 0; font-size: 16px; }
+        /* RESET DASAR */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Poppins', sans-serif; background-color: #f0f2f5; color: #333; padding: 20px; }
         
-        .table th { background-color: #f8f9fa !important; font-weight: bold; }
+        /* TOMBOL CETAK MENGAMBANG */
+        .btn-print {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background-color: #0d6efd;
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(13,110,253,0.4);
+            z-index: 1000;
+            transition: all 0.3s;
+        }
+        .btn-print:hover { background-color: #0b5ed7; transform: translateY(-3px); }
+
+        /* WADAH KERTAS */
+        .container { max-width: 210mm; margin: 0 auto; background: white; padding: 20mm; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
         
-        /* Mengatur agar tombol print tidak ikut tercetak di kertas */
+        /* JUDUL KELAS */
+        .class-header { text-align: center; font-size: 24px; font-weight: 700; margin-bottom: 20px; color: #2c3e50; border-bottom: 2px dashed #ccc; padding-bottom: 10px; }
+        
+        /* GRID KARTU PIN */
+        .cards-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 40px; }
+        
+        /* DESAIN KARTU PIN (SEPERTI TIKET) */
+        .card-pin {
+            border: 2px dashed #6c757d; /* Garis putus-putus untuk digunting */
+            border-radius: 8px;
+            padding: 15px;
+            background-color: #fff;
+            position: relative;
+        }
+        .card-header { text-align: center; font-size: 12px; font-weight: 700; color: #0d6efd; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .card-body { font-size: 13px; line-height: 1.5; }
+        .card-body span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .pin-box {
+            margin-top: 10px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            text-align: center;
+            padding: 8px;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: #dc3545; /* Warna merah agar mencolok */
+            border-radius: 5px;
+        }
+
+        /* ========================================= */
+        /* PENGATURAN KHUSUS SAAT DICETAK KE PRINTER */
+        /* ========================================= */
         @media print {
-            .no-print { display: none !important; }
-            body { padding: 0; }
+            body { background-color: white; padding: 0; }
+            .container { box-shadow: none; max-width: 100%; width: 100%; padding: 0; }
+            .btn-print { display: none !important; } /* Sembunyikan tombol cetak */
+            .page-break { page-break-after: always; } /* Paksa ganti halaman setiap ganti kelas */
+            .card-pin { break-inside: avoid; } /* Mencegah 1 kartu terpotong di antara 2 halaman */
         }
     </style>
 </head>
 <body>
 
-    <!-- Tombol Navigasi (Akan hilang saat dicetak) -->
-    <div class="mb-4 no-print text-center">
-        <a href="siswa.php" class="btn btn-secondary me-2">Kembali ke Manajemen Siswa</a>
-        <button onclick="window.print()" class="btn btn-primary"><i class="fas fa-print"></i> Cetak / Simpan PDF</button>
-        <p class="text-muted mt-2 small">Tips: Anda juga bisa menyorot (blok) tabel di bawah ini dan mem-paste-nya ke Excel.</p>
-    </div>
+    <!-- Tombol untuk memicu dialog print browser -->
+    <button class="btn-print no-print" onclick="window.print()">
+        <i class="fas fa-print"></i> Cetak Dokumen
+    </button>
 
-    <!-- Area yang akan dicetak -->
-    <div class="print-area">
-        <div class="kop-surat">
-            <h2>Daftar PIN Akses E-Voting</h2>
-            <p>SMK Taruna Karya Mandiri</p>
-            <p>Periode: <b><?= htmlspecialchars($nama_periode_aktif); ?></b></p>
-        </div>
+    <div class="container">
+        <?php 
+        $jumlah_kelas = count($data_per_kelas);
+        $iterasi = 0;
 
-        <table class="table table-bordered table-sm align-middle">
-            <thead>
-                <tr class="text-center">
-                    <th width="5%">No</th>
-                    <th width="15%">NIS</th>
-                    <th width="40%">Nama Lengkap</th>
-                    <th width="20%">Kelas</th>
-                    <th width="20%">PIN Akses</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (count($data_siswa) > 0): ?>
-                    <?php $no = 1; foreach ($data_siswa as $row): ?>
-                        <tr>
-                            <td class="text-center"><?= $no++; ?></td>
-                            <td class="text-center"><?= htmlspecialchars($row['nis']); ?></td>
-                            <td><?= htmlspecialchars($row['nama_siswa']); ?></td>
-                            <td class="text-center"><?= htmlspecialchars($row['kelas']); ?></td>
-                            <td class="text-center fw-bold" style="font-family: monospace; font-size: 1.1rem; letter-spacing: 2px;">
-                                <?= htmlspecialchars($row['pin']); ?>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <tr>
-                        <td colspan="5" class="text-center py-4">Belum ada data siswa untuk periode ini.</td>
-                    </tr>
-                <?php endif; ?>
-            </tbody>
-        </table>
-        
-        <div class="mt-4 text-end" style="font-size: 14px;">
-            <p>Dicetak pada: <?= date('d-m-Y H:i'); ?></p>
-            <p>Panitia Pemilihan</p>
-            <br><br><br>
-            <p>_______________________</p>
-        </div>
+        // Membaca array yang sudah dikelompokkan
+        foreach ($data_per_kelas as $nama_kelas => $siswa_kelas) { 
+            $iterasi++;
+        ?>
+            <!-- Judul Kelas -->
+            <div class="class-header">
+                KUMPULAN PIN KELAS: <?= htmlspecialchars($nama_kelas); ?>
+            </div>
+
+            <!-- Wadah Kartu -->
+            <div class="cards-grid">
+                <?php foreach ($siswa_kelas as $s): ?>
+                    <div class="card-pin">
+                        <div class="card-header">E-VOTING SMK TARUNA KARYA MANDIRI</div>
+                        <div class="card-body">
+                            <span><b>NIS:</b> <?= htmlspecialchars($s['nis']); ?></span>
+                            <span><b>Nama:</b> <?= htmlspecialchars($s['nama_siswa']); ?></span>
+                            <div class="pin-box">
+                                <?= htmlspecialchars($s['pin']); ?>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+
+            <!-- 
+                Pemaksa Halaman Baru (Page Break).
+                Hanya diterapkan jika ini bukan kelas terakhir.
+                Agar tidak ada halaman kosong di akhir cetakan.
+            -->
+            <?php if ($iterasi < $jumlah_kelas): ?>
+                <div class="page-break"></div>
+            <?php endif; ?>
+
+        <?php } ?>
     </div>
 
 </body>

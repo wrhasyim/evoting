@@ -6,7 +6,7 @@ $halaman_sekarang = basename($_SERVER['PHP_SELF']);
 <div class="sidebar">
     <div class="sidebar-brand">
         <i class="fas fa-vote-yea"></i>
-        E-Voting SMK
+        E-Voting SMK <br> TARUNA KARYA MANDIRI
     </div>
     
     <!-- Menu Dashboard -->
