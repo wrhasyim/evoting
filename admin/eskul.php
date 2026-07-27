@@ -36,10 +36,24 @@ if (isset($_POST['edit_eskul'])) {
 // 3. PROSES HAPUS ESKUL (SOFT DELETE)
 if (isset($_POST['hapus_eskul'])) {
     $id_eskul = $_POST['id_eskul'];
-    
     $stmt = $pdo->prepare("UPDATE eskul SET status_aktif = 0 WHERE id_eskul = :id");
     $stmt->execute(['id' => $id_eskul]);
     $pesan_notifikasi = "<div class='alert alert-warning'>Ekstrakurikuler telah dipindahkan ke Tempat Sampah.</div>";
+}
+
+// 4. PROSES BUKA/TUTUP PEMILIHAN (FITUR BARU)
+if (isset($_POST['toggle_pemilihan'])) {
+    $id_eskul = $_POST['id_eskul'];
+    $status_baru = $_POST['status_baru']; // 1 untuk Buka, 0 untuk Tutup
+    
+    $stmt = $pdo->prepare("UPDATE eskul SET status_pemilihan = :status WHERE id_eskul = :id");
+    $stmt->execute(['status' => $status_baru, 'id' => $id_eskul]);
+    
+    if ($status_baru == 1) {
+        $pesan_notifikasi = "<div class='alert alert-success'><i class='fas fa-unlock me-2'></i>Pemilihan untuk eskul ini resmi <b>DIBUKA</b>. Siswa kini bisa melihatnya.</div>";
+    } else {
+        $pesan_notifikasi = "<div class='alert alert-secondary'><i class='fas fa-lock me-2'></i>Pemilihan untuk eskul ini telah <b>DITUTUP</b>.</div>";
+    }
 }
 
 // MENGAMBIL SELURUH DATA ESKUL YANG AKTIF
@@ -71,18 +85,8 @@ $data_eskul = $stmt_tampil->fetchAll();
 </head>
 <body>
 
-    <!-- SIDEBAR NAVIGASI -->
-    <div class="sidebar">
-        <div class="sidebar-brand"><i class="fas fa-vote-yea"></i> E-Voting SMK</div>
-        <a href="index.php"><i class="fas fa-home"></i> Dashboard</a>
-        <a href="periode.php"><i class="fas fa-calendar-alt"></i> Tahun Ajaran</a>
-        <a href="siswa.php"><i class="fas fa-users"></i> Manajemen Siswa</a>
-        <a href="eskul.php" class="active"><i class="fas fa-school"></i> Manajemen Eskul</a>
-        <a href="#"><i class="fas fa-user-tie"></i> Kandidat</a>
-        <a href="#"><i class="fas fa-chart-pie"></i> Live Count</a>
-        <a href="#"><i class="fas fa-cogs"></i> Pengaturan</a>
-        <a href="../logout.php" class="text-warning mt-4"><i class="fas fa-sign-out-alt"></i> Keluar</a>
-    </div>
+    <!-- MEMANGGIL SIDEBAR -->
+    <?php include 'sidebar.php'; ?>
 
     <!-- KONTEN UTAMA -->
     <div class="content">
@@ -101,8 +105,9 @@ $data_eskul = $stmt_tampil->fetchAll();
                     <thead class="table-light">
                         <tr>
                             <th>No</th>
-                            <th>Nama Ekstrakurikuler / Organisasi</th>
-                            <th>Aturan Hak Pilih</th>
+                            <th>Nama Ekstrakurikuler</th>
+                            <th>Aturan Pemilih</th>
+                            <th>Status Pemilihan</th>
                             <th class="text-center">Aksi</th>
                         </tr>
                     </thead>
@@ -114,18 +119,42 @@ $data_eskul = $stmt_tampil->fetchAll();
                                     <td class="fw-bold text-primary"><?= htmlspecialchars($row['nama_eskul']); ?></td>
                                     <td>
                                         <?php if ($row['aturan_pemilih'] == 'semua_siswa'): ?>
-                                            <span class="badge bg-success"><i class="fas fa-globe"></i> Terbuka (Semua Siswa)</span>
+                                            <span class="badge bg-info"><i class="fas fa-globe"></i> Terbuka</span>
                                         <?php else: ?>
-                                            <span class="badge bg-warning text-dark"><i class="fas fa-lock"></i> Tertutup (Hanya Anggota)</span>
+                                            <span class="badge bg-warning text-dark"><i class="fas fa-users-cog"></i> Tertutup</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <!-- Menampilkan Badge Buka/Tutup -->
+                                        <?php if (isset($row['status_pemilihan']) && $row['status_pemilihan'] == 1): ?>
+                                            <span class="badge bg-success py-2 px-3"><i class="fas fa-door-open me-1"></i> Sedang Buka</span>
+                                        <?php else: ?>
+                                            <span class="badge bg-secondary py-2 px-3"><i class="fas fa-door-closed me-1"></i> Ditutup</span>
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-center">
+                                        <!-- Tombol Kontrol Buka/Tutup -->
+                                        <form method="POST" action="" class="d-inline">
+                                            <input type="hidden" name="id_eskul" value="<?= $row['id_eskul']; ?>">
+                                            <?php if (isset($row['status_pemilihan']) && $row['status_pemilihan'] == 1): ?>
+                                                <input type="hidden" name="status_baru" value="0">
+                                                <button type="submit" name="toggle_pemilihan" class="btn btn-sm btn-warning text-dark me-1" title="Tutup Pemilihan ini">
+                                                    <i class="fas fa-lock"></i>
+                                                </button>
+                                            <?php else: ?>
+                                                <input type="hidden" name="status_baru" value="1">
+                                                <button type="submit" name="toggle_pemilihan" class="btn btn-sm btn-success me-1" title="Buka Pemilihan ini">
+                                                    <i class="fas fa-unlock"></i>
+                                                </button>
+                                            <?php endif; ?>
+                                        </form>
+
                                         <!-- Tombol Edit -->
-                                        <button class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalEdit<?= $row['id_eskul']; ?>">
+                                        <button class="btn btn-sm btn-info text-white me-1" data-bs-toggle="modal" data-bs-target="#modalEdit<?= $row['id_eskul']; ?>" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                         <!-- Tombol Hapus -->
-                                        <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#modalHapus<?= $row['id_eskul']; ?>">
+                                        <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#modalHapus<?= $row['id_eskul']; ?>" title="Hapus">
                                             <i class="fas fa-trash-alt"></i>
                                         </button>
                                     </td>
@@ -187,7 +216,7 @@ $data_eskul = $stmt_tampil->fetchAll();
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="4" class="text-center py-4 text-muted">Belum ada data ekstrakurikuler.</td>
+                                <td colspan="5" class="text-center py-4 text-muted">Belum ada data ekstrakurikuler.</td>
                             </tr>
                         <?php endif; ?>
                     </tbody>
@@ -207,7 +236,7 @@ $data_eskul = $stmt_tampil->fetchAll();
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label">Nama Ekstrakurikuler / Organisasi</label>
+                            <label class="form-label">Nama Ekstrakurikuler</label>
                             <input type="text" name="nama_eskul" class="form-control" placeholder="Contoh: OSIS" required autocomplete="off">
                         </div>
                         <div class="mb-3">

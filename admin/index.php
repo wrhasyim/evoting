@@ -30,8 +30,9 @@ $stmt_bodong = $pdo->query("SELECT COUNT(*) FROM siswa WHERE nis NOT IN (SELECT 
 $siswa_bodong = $stmt_bodong->fetchColumn();
 
 // E. Mengambil Data Rekap Anggota per Eskul
+// Menggunakan id_eskul agar tidak terjadi error "Unknown column"
 $stmt_eskul = $pdo->query("
-    SELECT e.nama_eskul, COUNT(a.nis) AS total_anggota 
+    SELECT e.nama_eskul, COUNT(a.id_eskul) AS total_anggota 
     FROM eskul e 
     LEFT JOIN anggota_eskul a ON e.id_eskul = a.id_eskul 
     GROUP BY e.id_eskul
@@ -161,20 +162,8 @@ $rekap_eskul = $stmt_eskul->fetchAll();
 </head>
 <body>
 
-    <!-- SIDEBAR NAVIGASI MODERN -->
-    <div class="sidebar">
-        <div class="sidebar-brand">
-            <i class="fas fa-vote-yea"></i>
-            E-Voting SMK
-        </div>
-        <a href="index.php" class="active"><i class="fas fa-home"></i> Dashboard</a>
-        <a href="#"><i class="fas fa-users"></i> Manajemen Siswa</a>
-        <a href="#"><i class="fas fa-school"></i> Manajemen Eskul</a>
-        <a href="#"><i class="fas fa-user-tie"></i> Kandidat</a>
-        <a href="#"><i class="fas fa-chart-pie"></i> Live Count</a>
-        <a href="#"><i class="fas fa-cogs"></i> Pengaturan</a>
-        <a href="../logout.php" class="text-warning mt-4"><i class="fas fa-sign-out-alt"></i> Keluar</a>
-    </div>
+    <!-- MEMANGGIL SIDEBAR DARI FILE TERPISAH -->
+    <?php include 'sidebar.php'; ?>
 
     <!-- KONTEN UTAMA -->
     <div class="content">
@@ -187,7 +176,7 @@ $rekap_eskul = $stmt_eskul->fetchAll();
             </div>
             <div>
                 <span class="badge bg-primary p-2 fs-6 rounded-pill">
-                    <i class="fas fa-user-circle me-1"></i> <?= htmlspecialchars($_SESSION['nama_lengkap']); ?>
+                    <i class="fas fa-user-circle me-1"></i> <?= htmlspecialchars($_SESSION['nama_lengkap'] ?? 'Admin'); ?>
                 </span>
             </div>
         </div>

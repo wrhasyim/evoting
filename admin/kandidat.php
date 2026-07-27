@@ -29,48 +29,71 @@ if (isset($_POST['tambah_kandidat']) && $id_eskul_pilih) {
     $kelas_paslon = trim($_POST['kelas_paslon']);
     $visi_misi = trim($_POST['visi_misi']);
     
-    // Logika Upload Foto
     $nama_file = $_FILES['foto']['name'];
     $ukuran_file = $_FILES['foto']['size'];
-    $error_file = $_FILES['foto']['error'];
     $tmp_file = $_FILES['foto']['tmp_name'];
     
     $ekstensi_valid = ['jpg', 'jpeg', 'png'];
-    $ekstensi_gambar = explode('.', $nama_file);
-    $ekstensi_gambar = strtolower(end($ekstensi_gambar));
-    
-    // Menghasilkan nama file baru yang unik agar tidak ada file yang tertimpa
+    $ekstensi_gambar = strtolower(pathinfo($nama_file, PATHINFO_EXTENSION));
     $nama_file_baru = uniqid() . '.' . $ekstensi_gambar;
-    $path_simpan = '../uploads/' . $nama_file_baru;
 
-    // Validasi file
-    if (in_array($ekstensi_gambar, $ekstensi_valid)) {
-        if ($ukuran_file <= 2097152) { // Maksimal 2MB
-            if (move_uploaded_file($tmp_file, $path_simpan)) {
-                // Masukkan ke database jika foto berhasil diunggah
-                $stmt = $pdo->prepare("INSERT INTO kandidat (id_eskul, no_urut, nama_paslon, kelas_paslon, visi_misi, foto) VALUES (?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$id_eskul_pilih, $no_urut, $nama_paslon, $kelas_paslon, $visi_misi, $nama_file_baru]);
-                $pesan_notifikasi = "<div class='alert alert-success'>Kandidat berhasil ditambahkan!</div>";
-            } else {
-                $pesan_notifikasi = "<div class='alert alert-danger'>Gagal mengunggah foto ke server.</div>";
-            }
+    if (in_array($ekstensi_gambar, $ekstensi_valid) && $ukuran_file <= 2097152) {
+        if (move_uploaded_file($tmp_file, '../uploads/' . $nama_file_baru)) {
+            $stmt = $pdo->prepare("INSERT INTO kandidat (id_eskul, no_urut, nama_paslon, kelas_paslon, visi_misi, foto) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$id_eskul_pilih, $no_urut, $nama_paslon, $kelas_paslon, $visi_misi, $nama_file_baru]);
+            $pesan_notifikasi = "<div class='alert alert-success'>Kandidat berhasil ditambahkan!</div>";
         } else {
-            $pesan_notifikasi = "<div class='alert alert-danger'>Ukuran foto terlalu besar (Maksimal 2MB).</div>";
+            $pesan_notifikasi = "<div class='alert alert-danger'>Gagal mengunggah foto.</div>";
         }
     } else {
-        $pesan_notifikasi = "<div class='alert alert-danger'>Ekstensi file tidak diizinkan. Hanya menerima .jpg, .jpeg, atau .png.</div>";
+        $pesan_notifikasi = "<div class='alert alert-danger'>Format foto tidak valid atau ukuran lebih dari 2MB.</div>";
     }
 }
 
-// 5. PROSES HAPUS KANDIDAT (Soft Delete)
+// 5. PROSES EDIT KANDIDAT (FITUR BARU)
+if (isset($_POST['edit_kandidat'])) {
+    $id_kandidat = $_POST['id_kandidat'];
+    $no_urut = $_POST['no_urut'];
+    $nama_paslon = trim($_POST['nama_paslon']);
+    $kelas_paslon = trim($_POST['kelas_paslon']);
+    $visi_misi = trim($_POST['visi_misi']);
+    $foto_lama = $_POST['foto_lama'];
+    
+    $nama_file_baru = $foto_lama; // Secara default, gunakan foto yang sudah ada
+
+    // Jika admin mengunggah foto baru
+    if (isset($_FILES['foto']) && $_FILES['foto']['name'] != '') {
+        $nama_file = $_FILES['foto']['name'];
+        $ukuran_file = $_FILES['foto']['size'];
+        $tmp_file = $_FILES['foto']['tmp_name'];
+        $ekstensi_gambar = strtolower(pathinfo($nama_file, PATHINFO_EXTENSION));
+        $ekstensi_valid = ['jpg', 'jpeg', 'png'];
+
+        if (in_array($ekstensi_gambar, $ekstensi_valid) && $ukuran_file <= 2097152) {
+            $nama_file_baru = uniqid() . '.' . $ekstensi_gambar;
+            move_uploaded_file($tmp_file, '../uploads/' . $nama_file_baru);
+            
+            // Hapus file foto lama di server agar tidak menumpuk
+            if (file_exists('../uploads/' . $foto_lama) && $foto_lama != '') {
+                unlink('../uploads/' . $foto_lama);
+            }
+        }
+    }
+
+    $stmt = $pdo->prepare("UPDATE kandidat SET no_urut=?, nama_paslon=?, kelas_paslon=?, visi_misi=?, foto=? WHERE id_kandidat=?");
+    $stmt->execute([$no_urut, $nama_paslon, $kelas_paslon, $visi_misi, $nama_file_baru, $id_kandidat]);
+    $pesan_notifikasi = "<div class='alert alert-success'>Data kandidat berhasil diperbarui!</div>";
+}
+
+// 6. PROSES HAPUS KANDIDAT
 if (isset($_POST['hapus_kandidat'])) {
     $id_kandidat = $_POST['id_kandidat'];
     $stmt = $pdo->prepare("UPDATE kandidat SET status_aktif = 0 WHERE id_kandidat = ?");
     $stmt->execute([$id_kandidat]);
-    $pesan_notifikasi = "<div class='alert alert-warning'>Kandidat telah dihapus / dipindahkan ke tempat sampah.</div>";
+    $pesan_notifikasi = "<div class='alert alert-warning'>Kandidat telah dihapus.</div>";
 }
 
-// 6. AMBIL DATA KANDIDAT UNTUK TABEL
+// AMBIL DATA KANDIDAT
 $data_kandidat = [];
 if ($id_eskul_pilih) {
     $stmt_kandidat = $pdo->prepare("SELECT * FROM kandidat WHERE id_eskul = ? AND status_aktif = 1 ORDER BY no_urut ASC");
@@ -104,19 +127,8 @@ if ($id_eskul_pilih) {
 </head>
 <body>
 
-    <!-- SIDEBAR NAVIGASI -->
-    <div class="sidebar">
-        <div class="sidebar-brand"><i class="fas fa-vote-yea"></i> E-Voting SMK</div>
-        <a href="index.php"><i class="fas fa-home"></i> Dashboard</a>
-        <a href="periode.php"><i class="fas fa-calendar-alt"></i> Tahun Ajaran</a>
-        <a href="siswa.php"><i class="fas fa-users"></i> Manajemen Siswa</a>
-        <a href="eskul.php"><i class="fas fa-school"></i> Manajemen Eskul</a>
-        <a href="anggota_eskul.php"><i class="fas fa-users-cog"></i> Anggota Eskul</a>
-        <a href="kandidat.php" class="active"><i class="fas fa-user-tie"></i> Kandidat</a>
-        <a href="#"><i class="fas fa-chart-pie"></i> Live Count</a>
-        <a href="#"><i class="fas fa-cogs"></i> Pengaturan</a>
-        <a href="../logout.php" class="text-warning mt-4"><i class="fas fa-sign-out-alt"></i> Keluar</a>
-    </div>
+    <!-- MEMANGGIL SIDEBAR -->
+    <?php include 'sidebar.php'; ?>
 
     <!-- KONTEN UTAMA -->
     <div class="content">
@@ -175,7 +187,7 @@ if ($id_eskul_pilih) {
                                     <tr>
                                         <td class="text-center fw-bold fs-5 text-primary"><?= $row['no_urut']; ?></td>
                                         <td class="text-center">
-                                            <img src="../uploads/<?= htmlspecialchars($row['foto']); ?>" alt="Foto Kandidat" class="foto-kandidat">
+                                            <img src="../uploads/<?= htmlspecialchars($row['foto']); ?>" alt="Foto" class="foto-kandidat">
                                         </td>
                                         <td class="fw-bold"><?= htmlspecialchars($row['nama_paslon']); ?></td>
                                         <td><span class="badge bg-secondary"><?= htmlspecialchars($row['kelas_paslon']); ?></span></td>
@@ -185,12 +197,62 @@ if ($id_eskul_pilih) {
                                             </span>
                                         </td>
                                         <td class="text-center">
+                                            <!-- Tombol Edit -->
+                                            <button class="btn btn-sm btn-info text-white me-1" data-bs-toggle="modal" data-bs-target="#modalEdit<?= $row['id_kandidat']; ?>" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
                                             <!-- Tombol Hapus -->
-                                            <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#modalHapus<?= $row['id_kandidat']; ?>">
+                                            <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#modalHapus<?= $row['id_kandidat']; ?>" title="Hapus">
                                                 <i class="fas fa-trash-alt"></i>
                                             </button>
                                         </td>
                                     </tr>
+
+                                    <!-- MODAL EDIT KANDIDAT -->
+                                    <div class="modal fade" id="modalEdit<?= $row['id_kandidat']; ?>" tabindex="-1">
+                                        <div class="modal-dialog modal-lg">
+                                            <div class="modal-content">
+                                                <form method="POST" action="" enctype="multipart/form-data">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title fw-bold">Edit Data Kandidat</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body text-start">
+                                                        <input type="hidden" name="id_kandidat" value="<?= $row['id_kandidat']; ?>">
+                                                        <input type="hidden" name="foto_lama" value="<?= $row['foto']; ?>">
+                                                        
+                                                        <div class="row">
+                                                            <div class="col-md-3 mb-3">
+                                                                <label class="form-label">Nomor Urut</label>
+                                                                <input type="number" name="no_urut" class="form-control" min="1" value="<?= htmlspecialchars($row['no_urut']); ?>" required>
+                                                            </div>
+                                                            <div class="col-md-9 mb-3">
+                                                                <label class="form-label">Nama Pasangan Calon</label>
+                                                                <input type="text" name="nama_paslon" class="form-control" value="<?= htmlspecialchars($row['nama_paslon']); ?>" required>
+                                                            </div>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="form-label">Kelas Asal</label>
+                                                            <input type="text" name="kelas_paslon" class="form-control" value="<?= htmlspecialchars($row['kelas_paslon']); ?>" required>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="form-label">Visi dan Misi</label>
+                                                            <textarea name="visi_misi" class="form-control" rows="5" required><?= htmlspecialchars($row['visi_misi']); ?></textarea>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="form-label">Ganti Foto (Opsional)</label>
+                                                            <input type="file" name="foto" class="form-control" accept=".jpg, .jpeg, .png">
+                                                            <small class="text-muted">Biarkan kosong jika tidak ingin mengubah foto saat ini.</small>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                                                        <button type="submit" name="edit_kandidat" class="btn btn-info text-white">Simpan Perubahan</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
 
                                     <!-- MODAL HAPUS KANDIDAT -->
                                     <div class="modal fade" id="modalHapus<?= $row['id_kandidat']; ?>" tabindex="-1">
@@ -201,7 +263,7 @@ if ($id_eskul_pilih) {
                                                         <h5 class="modal-title">Konfirmasi Penghapusan</h5>
                                                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                                     </div>
-                                                    <div class="modal-body">
+                                                    <div class="modal-body text-start">
                                                         <p>Hapus kandidat <b><?= htmlspecialchars($row['nama_paslon']); ?></b>?</p>
                                                         <input type="hidden" name="id_kandidat" value="<?= $row['id_kandidat']; ?>">
                                                     </div>
@@ -228,7 +290,6 @@ if ($id_eskul_pilih) {
             <div class="modal fade" id="modalTambah" tabindex="-1">
                 <div class="modal-dialog modal-lg">
                     <div class="modal-content">
-                        <!-- Wajib menggunakan enctype="multipart/form-data" untuk upload file -->
                         <form method="POST" action="" enctype="multipart/form-data">
                             <div class="modal-header">
                                 <h5 class="modal-title fw-bold">Tambah Kandidat Baru</h5>

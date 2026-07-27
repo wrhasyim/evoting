@@ -98,18 +98,8 @@ $data_periode = $stmt_tampil->fetchAll();
 </head>
 <body>
 
-    <!-- SIDEBAR NAVIGASI -->
-    <div class="sidebar">
-        <div class="sidebar-brand"><i class="fas fa-vote-yea"></i> E-Voting SMK</div>
-        <a href="index.php"><i class="fas fa-home"></i> Dashboard</a>
-        <a href="periode.php" class="active"><i class="fas fa-calendar-alt"></i> Tahun Ajaran</a>
-        <a href="siswa.php"><i class="fas fa-users"></i> Manajemen Siswa</a>
-        <a href="#"><i class="fas fa-school"></i> Manajemen Eskul</a>
-        <a href="#"><i class="fas fa-user-tie"></i> Kandidat</a>
-        <a href="#"><i class="fas fa-chart-pie"></i> Live Count</a>
-        <a href="#"><i class="fas fa-cogs"></i> Pengaturan</a>
-        <a href="../logout.php" class="text-warning mt-4"><i class="fas fa-sign-out-alt"></i> Keluar</a>
-    </div>
+    <!-- MEMANGGIL SIDEBAR DARI FILE TERPISAH -->
+    <?php include 'sidebar.php'; ?>
 
     <!-- KONTEN UTAMA -->
     <div class="content">

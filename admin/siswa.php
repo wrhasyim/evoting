@@ -48,7 +48,9 @@ if (isset($_POST['tambah_siswa']) && $id_periode_aktif) {
 if (isset($_POST['import_csv']) && $id_periode_aktif) {
     $ekstensi_diizinkan = ['csv', 'txt'];
     $nama_file = $_FILES['file_csv']['name'];
-    $ekstensi_file = strtolower(end(explode('.', $nama_file)));
+   // Memecah nama file dan menyimpannya ke variabel terlebih dahulu
+$pecah_nama = explode('.', $nama_file);
+$ekstensi_file = strtolower(end($pecah_nama));
     $file_tmp = $_FILES['file_csv']['tmp_name'];
 
     if (in_array($ekstensi_file, $ekstensi_diizinkan) === true) {
@@ -137,18 +139,8 @@ if ($id_periode_aktif) {
 </head>
 <body>
 
-    <!-- SIDEBAR NAVIGASI -->
-    <div class="sidebar">
-        <div class="sidebar-brand"><i class="fas fa-vote-yea"></i> E-Voting SMK</div>
-        <a href="index.php"><i class="fas fa-home"></i> Dashboard</a>
-        <a href="periode.php"><i class="fas fa-calendar-alt"></i> Tahun Ajaran</a>
-        <a href="siswa.php" class="active"><i class="fas fa-users"></i> Manajemen Siswa</a>
-        <a href="#"><i class="fas fa-school"></i> Manajemen Eskul</a>
-        <a href="#"><i class="fas fa-user-tie"></i> Kandidat</a>
-        <a href="#"><i class="fas fa-chart-pie"></i> Live Count</a>
-        <a href="#"><i class="fas fa-cogs"></i> Pengaturan</a>
-        <a href="../logout.php" class="text-warning mt-4"><i class="fas fa-sign-out-alt"></i> Keluar</a>
-    </div>
+    <!-- MEMANGGIL SIDEBAR DARI FILE TERPISAH -->
+    <?php include 'sidebar.php'; ?>
 
     <!-- KONTEN UTAMA -->
     <div class="content">
@@ -314,7 +306,7 @@ if ($id_periode_aktif) {
         </div>
     </div>
 
-    <!-- MODAL IMPORT CSV -->
+    <!-- MODAL IMPORT CSV (TELAH DIPERBARUI DENGAN TOMBOL SAMPLE) -->
     <div class="modal fade" id="modalImport" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -325,7 +317,11 @@ if ($id_periode_aktif) {
                     </div>
                     <div class="modal-body">
                         <div class="alert alert-warning small">
-                            Pastikan file Anda berformat <b>.csv</b>. Kolom berurutan: NIS, Nama Lengkap, Kelas.
+                            Pastikan file Anda berformat <b>.csv</b>. Kolom berurutan: NIS, Nama Lengkap, Kelas.<br>
+                            <!-- Tombol Download Sample dengan Data URI -->
+                            <a href="data:text/csv;charset=utf-8,NIS,Nama Lengkap,Kelas%0A1001,Budi Santoso,XI RPL 1%0A1002,Siti Aminah,XI TKJ 2" download="format_import_siswa.csv" class="btn btn-sm btn-outline-success mt-3 fw-bold">
+                                <i class="fas fa-download me-1"></i> Download Format Sample
+                            </a>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Pilih File CSV</label>
