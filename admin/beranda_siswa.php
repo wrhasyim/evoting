@@ -34,7 +34,9 @@ $id_siswa = $siswa['id_siswa'];
 
 // 4. CEK APAKAH SUDAH MEMILIH SEMUA (KUNCI GLOBAL)
 if ($siswa['status_pilih'] == 1) {
-    die("<div style='text-align:center; padding: 50px; font-family:sans-serif;'><h2>Terima Kasih!</h2><p>Anda sudah memberikan hak suara Anda. Pilihan Anda telah dirahasiakan dan diamankan oleh sistem.</p><a href='../logout.php' style='display:inline-block; margin-top:20px; padding:10px 20px; background:#007bff; color:#fff; text-decoration:none; border-radius:5px;'>Keluar Sistem</a></div>");
+    // PERBAIKAN: Langsung arahkan ke logout jika siswa yang sudah memilih mencoba masuk lagi
+    header("Location: ../logout.php");
+    exit;
 }
 
 // 5. MENGAMBIL DAFTAR ESKUL YANG BERHAK DIPILIH (Sedang Dibuka & Belum Dicoblos Siswa Ini)
@@ -78,8 +80,8 @@ if (isset($_POST['submit_vote'])) {
 
             $pdo->commit();
             
-            // Arahkan ke beranda untuk melihat pesan Terima Kasih
-            header("Location: beranda_siswa.php");
+            // PERBAIKAN: Arahkan langsung ke halaman logout setelah selesai memilih
+            header("Location: ../logout.php");
             exit;
 
         } catch (Exception $e) {
@@ -159,10 +161,11 @@ if (isset($_POST['submit_vote'])) {
         <?php endif; ?>
 
         <?php if (count($daftar_hak_pilih) == 0): ?>
+            <!-- Menampilkan layar ini jika tidak ada pemilihan yang sedang dibuka -->
             <div class="bg-white p-5 rounded-4 shadow-sm text-center">
-                <i class="fas fa-check-circle text-success" style="font-size: 5rem; margin-bottom: 20px;"></i>
-                <h3 class="fw-bold text-dark">Terima Kasih!</h3>
-                <p class="text-muted fs-5">Anda sudah menyelesaikan semua pemilihan yang tersedia saat ini, atau belum ada jadwal pemilihan yang dibuka oleh panitia.</p>
+                <i class="fas fa-calendar-times text-warning" style="font-size: 5rem; margin-bottom: 20px;"></i>
+                <h3 class="fw-bold text-dark">Belum Ada Pemilihan</h3>
+                <p class="text-muted fs-5">Saat ini belum ada jadwal pemilihan yang dibuka oleh panitia untuk Anda.</p>
             </div>
         <?php else: ?>
             
@@ -275,7 +278,6 @@ if (isset($_POST['submit_vote'])) {
                 
                 // 1. Menghapus styling dari kandidat lain di kategori yang sama
                 document.querySelectorAll(`input[name="${name}"]`).forEach(r => {
-                    // PERBAIKAN: Mencari .card-kandidat melalui elemen parent (label)
                     const card = r.closest('label').querySelector('.card-kandidat');
                     if(card) {
                         card.classList.remove('selected');
