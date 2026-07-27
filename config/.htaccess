@@ -1,0 +1,10 @@
+# config/.htaccess
+
+# Menonaktifkan daftar direktori (mencegah orang melihat isi folder)
+Options -Indexes
+
+# Mencegah akses langsung ke semua file di dalam folder ini
+<FilesMatch "\.(php|ini|log|txt)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>

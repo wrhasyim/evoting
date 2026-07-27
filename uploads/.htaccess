@@ -1,0 +1,25 @@
+# uploads/.htaccess
+
+# Menonaktifkan daftar direktori
+Options -Indexes
+
+# Mematikan mesin PHP di folder ini. 
+# Jika ada file PHP yang terunggah, server tidak akan menjalankannya.
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php8.c>
+    php_flag engine off
+</IfModule>
+
+# Hanya mengizinkan file gambar untuk diakses dari browser
+<FilesMatch "\.(?i:jpg|jpeg|png|gif)$">
+    Order allow,deny
+    Allow from all
+</FilesMatch>
+
+# Memblokir akses ke file selain gambar (seperti .php, .html, .js)
+<FilesMatch "\.(?i:php|php3|php4|php5|phtml|inc|html|js)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
