@@ -103,7 +103,7 @@ if (isset($_POST['submit_vote'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { font-family: 'Poppins', sans-serif; background-color: #f4f7fa; padding-bottom: 50px; }
-        .header-area { background: linear-gradient(135deg, #1a2980, #26d0ce); color: white; padding: 30px 0; border-bottom-left-radius: 30px; border-bottom-right-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 40px; }
+        .header-area { color: white; padding: 30px 0; border-bottom-left-radius: 30px; border-bottom-right-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 40px; }
         
         .card-kandidat { 
             border: 2px solid #e9ecef; 
@@ -141,11 +141,31 @@ if (isset($_POST['submit_vote'])) {
 </head>
 <body>
 
-    <div class="header-area text-center">
+    <?php
+    // Logika cerdas untuk mendeteksi ketersediaan banner dan logo
+    $banner_file = glob("../uploads/banner_utama.*");
+    $logo_file = glob("../uploads/logo_utama.*");
+    
+    $banner_url = !empty($banner_file) ? $banner_file[0] : null;
+    $logo_url = !empty($logo_file) ? $logo_file[0] : null;
+    
+    // Jika ada banner, gunakan sebagai background
+    $header_style = $banner_url 
+        ? "background: linear-gradient(rgba(26, 41, 128, 0.8), rgba(38, 208, 206, 0.8)), url('{$banner_url}') center/cover no-repeat;" 
+        : "background: linear-gradient(135deg, #1a2980, #26d0ce);";
+    ?>
+
+    <div class="header-area text-center" style="<?= $header_style; ?>">
         <div class="container">
-            <h2 class="fw-bold"><i class="fas fa-vote-yea me-2"></i> E-Voting SMK TARUNA KARYA MANDIRI</h2>
-            <p class="mb-0 fs-5">Selamat datang, <b><?= htmlspecialchars($siswa['nama_siswa']); ?></b></p>
-            <span class="badge bg-light text-dark mt-2 px-3 py-2">Periode: <?= htmlspecialchars($periode_aktif['nama_periode']); ?></span>
+            <!-- Menampilkan Logo Jika Ada -->
+            <?php if ($logo_url): ?>
+                <img src="<?= $logo_url; ?>" alt="Logo Sekolah" style="max-height: 80px; margin-bottom: 15px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));">
+            <?php else: ?>
+                <h2 class="fw-bold"><i class="fas fa-vote-yea me-2"></i> E-Voting SMK TARUNA KARYA MANDIRI</h2>
+            <?php endif; ?>
+            
+            <p class="mb-0 fs-5 text-white">Selamat datang, <b class="text-warning"><?= htmlspecialchars($siswa['nama_siswa']); ?></b></p>
+            <span class="badge bg-light text-dark mt-2 px-3 py-2 border border-white">Periode: <?= htmlspecialchars($periode_aktif['nama_periode']); ?></span>
             
             <div class="mt-3">
                 <a href="../logout.php" class="btn btn-outline-light btn-sm rounded-pill px-3">

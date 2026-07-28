@@ -81,14 +81,12 @@ if (isset($_POST['import_db'])) {
 }
 
 // ==========================================
-// FITUR BARU: RESET TOTAL SISTEM
+// FITUR: RESET TOTAL SISTEM
 // ==========================================
 if (isset($_POST['reset_total'])) {
     try {
-        // Matikan sementara pengecekan relasi agar tidak error
         $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
         
-        // Daftar tabel yang akan dikosongkan (tanpa menyentuh tabel admin)
         $tabel_direset = [
             'suara_masuk', 
             'riwayat_pilih', 
@@ -100,17 +98,64 @@ if (isset($_POST['reset_total'])) {
         ];
 
         foreach ($tabel_direset as $tabel) {
-            $pdo->exec("DELETE FROM $tabel;"); // Hapus isi datanya
-            $pdo->exec("ALTER TABLE $tabel AUTO_INCREMENT = 1;"); // Kembalikan ID menjadi 1
+            $pdo->exec("DELETE FROM $tabel;");
+            $pdo->exec("ALTER TABLE $tabel AUTO_INCREMENT = 1;");
         }
         
-        // Hidupkan kembali pengecekan relasi
         $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
         
         $pesan_notifikasi = "<div class='alert alert-success fw-bold'><i class='fas fa-check-circle me-2'></i>Sistem berhasil di-reset total! Semua data telah dikosongkan dengan bersih.</div>";
     } catch (PDOException $e) {
-        $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;"); // Pastikan relasi hidup kembali jika terjadi error
+        $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
         $pesan_notifikasi = "<div class='alert alert-danger'><i class='fas fa-exclamation-triangle me-2'></i>Gagal mereset sistem: " . $e->getMessage() . "</div>";
+    }
+}
+
+// ==========================================
+// FITUR BARU: UNGGAH VISUAL (BANNER & LOGO)
+// ==========================================
+if (isset($_POST['upload_visual'])) {
+    $direktori_simpan = '../uploads/';
+    
+    // Pastikan folder uploads ada
+    if (!file_exists($direktori_simpan)) {
+        mkdir($direktori_simpan, 0777, true);
+    }
+    
+    $ekstensi_valid = ['png', 'jpg', 'jpeg'];
+    
+    // Proses Banner
+    if (!empty($_FILES['banner_sekolah']['name'])) {
+        $nama_file = $_FILES['banner_sekolah']['name'];
+        $tmp_file = $_FILES['banner_sekolah']['tmp_name'];
+        $ukuran = $_FILES['banner_sekolah']['size'];
+        $ekstensi = strtolower(pathinfo($nama_file, PATHINFO_EXTENSION));
+        
+        if (in_array($ekstensi, $ekstensi_valid) && $ukuran <= 2097152) {
+            $file_tujuan = $direktori_simpan . 'banner_utama.' . $ekstensi;
+            array_map('unlink', glob($direktori_simpan . "banner_utama.*"));
+            move_uploaded_file($tmp_file, $file_tujuan);
+            $pesan_notifikasi .= "<div class='alert alert-success'>Banner berhasil diperbarui!</div>";
+        } else {
+            $pesan_notifikasi .= "<div class='alert alert-danger'>Format banner harus JPG/PNG dan maksimal 2MB.</div>";
+        }
+    }
+
+    // Proses Logo
+    if (!empty($_FILES['logo_sekolah']['name'])) {
+        $nama_file = $_FILES['logo_sekolah']['name'];
+        $tmp_file = $_FILES['logo_sekolah']['tmp_name'];
+        $ukuran = $_FILES['logo_sekolah']['size'];
+        $ekstensi = strtolower(pathinfo($nama_file, PATHINFO_EXTENSION));
+        
+        if (in_array($ekstensi, $ekstensi_valid) && $ukuran <= 1048576) {
+            $file_tujuan = $direktori_simpan . 'logo_utama.' . $ekstensi;
+            array_map('unlink', glob($direktori_simpan . "logo_utama.*"));
+            move_uploaded_file($tmp_file, $file_tujuan);
+            $pesan_notifikasi .= "<div class='alert alert-success'>Logo berhasil diperbarui!</div>";
+        } else {
+            $pesan_notifikasi .= "<div class='alert alert-danger'>Format logo harus JPG/PNG dan maksimal 1MB.</div>";
+        }
     }
 }
 
@@ -134,19 +179,19 @@ if (isset($_POST['simpan_pengaturan'])) {
                 $hash_baru = password_hash($password_baru, PASSWORD_DEFAULT);
                 $update = $pdo->prepare("UPDATE admin SET nama_lengkap = ?, username = ?, password = ? WHERE id_admin = ?");
                 $update->execute([$nama_baru, $username_baru, $hash_baru, $id_admin]);
-                $pesan_notifikasi = "<div class='alert alert-success'>Profil dan Password berhasil diperbarui!</div>";
+                $pesan_notifikasi .= "<div class='alert alert-success'>Profil dan Password berhasil diperbarui!</div>";
                 $_SESSION['nama_lengkap'] = $nama_baru;
             } else {
-                $pesan_notifikasi = "<div class='alert alert-danger'>Gagal: Password baru dan konfirmasi tidak cocok.</div>";
+                $pesan_notifikasi .= "<div class='alert alert-danger'>Gagal: Password baru dan konfirmasi tidak cocok.</div>";
             }
         } else {
             $update = $pdo->prepare("UPDATE admin SET nama_lengkap = ?, username = ? WHERE id_admin = ?");
             $update->execute([$nama_baru, $username_baru, $id_admin]);
-            $pesan_notifikasi = "<div class='alert alert-success'>Profil berhasil diperbarui!</div>";
+            $pesan_notifikasi .= "<div class='alert alert-success'>Profil berhasil diperbarui!</div>";
             $_SESSION['nama_lengkap'] = $nama_baru;
         }
     } else {
-        $pesan_notifikasi = "<div class='alert alert-danger'>Gagal: Password saat ini (lama) yang Anda masukkan salah.</div>";
+        $pesan_notifikasi .= "<div class='alert alert-danger'>Gagal: Password saat ini (lama) yang Anda masukkan salah.</div>";
     }
 }
 
@@ -188,7 +233,7 @@ $data_admin = $stmt->fetch();
         <div class="top-header">
             <div>
                 <h4 class="m-0 fw-bold" style="color: #2c3e50;">Pengaturan Sistem</h4>
-                <small class="text-muted">Kelola keamanan profil, manajemen cadangan, dan pembersihan data.</small>
+                <small class="text-muted">Kelola keamanan profil, manajemen cadangan, kustomisasi visual, dan pembersihan data.</small>
             </div>
         </div>
 
@@ -197,11 +242,36 @@ $data_admin = $stmt->fetch();
         <!-- Membagi layar menjadi 2 kolom agar rapi -->
         <div class="row">
             
-            <!-- KOLOM KIRI: Profil & Kata Sandi -->
+            <!-- KOLOM KIRI: Visual & Keamanan -->
             <div class="col-md-6 mb-4">
-                <div class="form-container border-top border-primary border-5 h-100">
+                
+                <!-- Kustomisasi Visual -->
+                <div class="form-container border-top border-info border-5 mb-4 bg-white">
+                    <form method="POST" action="" enctype="multipart/form-data">
+                        <h5 class="fw-bold mb-4 border-bottom pb-2 text-info"><i class="fas fa-paint-brush me-2"></i> Kustomisasi Visual</h5>
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-medium">Banner Header Pemilihan</label>
+                            <input type="file" name="banner_sekolah" class="form-control" accept=".jpg, .jpeg, .png">
+                            <small class="text-muted d-block mt-1">Rekomendasi ukuran: 1200x300 pixel (Landscape). Maksimal 2MB.</small>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-medium">Logo Resmi Sekolah</label>
+                            <input type="file" name="logo_sekolah" class="form-control" accept=".png">
+                            <small class="text-muted d-block mt-1">Rekomendasi format PNG (latar transparan). Maksimal 1MB.</small>
+                        </div>
+
+                        <button type="submit" name="upload_visual" class="btn btn-info text-white w-100 fw-bold py-2 mt-2">
+                            <i class="fas fa-upload me-2"></i> Simpan Visual
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Keamanan Akun -->
+                <div class="form-container border-top border-primary border-5 bg-white">
                     <form method="POST" action="">
-                        <h5 class="fw-bold mb-4 border-bottom pb-2"><i class="fas fa-user-shield me-2"></i> Keamanan Akun</h5>
+                        <h5 class="fw-bold mb-4 border-bottom pb-2 text-primary"><i class="fas fa-user-shield me-2"></i> Keamanan Akun</h5>
                         
                         <div class="mb-3">
                             <label class="form-label fw-medium">Nama Lengkap</label>
@@ -242,9 +312,9 @@ $data_admin = $stmt->fetch();
 
             <!-- KOLOM KANAN: Export, Import & Reset Database -->
             <div class="col-md-6 mb-4">
-                <div class="form-container border-top border-success border-5 mb-4">
+                <div class="form-container border-top border-success border-5 mb-4 bg-white">
                     <h5 class="fw-bold mb-4 border-bottom pb-2"><i class="fas fa-database me-2"></i> Manajemen Database</h5>
-                    <p class="text-muted small">Cegah kehilangan data dengan melakukan pencadangan (Backup) secara rutin. Anda dapat memulihkan (Restore) sistem menggunakan file .sql hasil unduhan Anda.</p>
+                    <p class="text-muted small">Cegah kehilangan data dengan melakukan pencadangan (Backup) secara rutin. Anda dapat memulihkan (Restore) sistem menggunakan file .sql hasil unduhan Anda[cite: 3].</p>
                     
                     <!-- Form Export (Download) -->
                     <form method="POST" action="" class="mb-4">
@@ -259,7 +329,7 @@ $data_admin = $stmt->fetch();
                         <div class="mb-3">
                             <label class="form-label small">Pilih File Cadangan (.sql)</label>
                             <input type="file" name="file_sql" class="form-control" accept=".sql" required>
-                            <small class="text-danger mt-2 d-block"><b>Peringatan:</b> Melakukan restore akan menimpa seluruh data saat ini.</small>
+                            <small class="text-danger mt-2 d-block"><b>Peringatan:</b> Melakukan restore akan menimpa seluruh data saat ini[cite: 3].</small>
                         </div>
                         <button type="submit" name="import_db" class="btn btn-outline-dark w-100 fw-bold" onclick="return confirm('Semua data saat ini akan terganti. Anda yakin?');">
                             Mulai Restore
@@ -270,7 +340,7 @@ $data_admin = $stmt->fetch();
                 <!-- KOTAK RESET TOTAL -->
                 <div class="form-container border-top border-danger border-5 bg-white">
                     <h5 class="fw-bold text-danger mb-3 border-bottom pb-2"><i class="fas fa-skull-crossbones me-2"></i> Reset Total Sistem</h5>
-                    <p class="text-muted small">Gunakan fitur ini untuk <b>mengosongkan seluruh isi sistem</b> (Data Tahun Ajaran, Eskul, Siswa, Kandidat, dan Suara Pemilih). Sangat berguna setelah melakukan uji coba menggunakan data <i>dummy</i>.</p>
+                    <p class="text-muted small">Gunakan fitur ini untuk <b>mengosongkan seluruh isi sistem</b> (Data Tahun Ajaran, Eskul, Siswa, Kandidat, dan Suara Pemilih). Sangat berguna setelah melakukan uji coba menggunakan data <i>dummy</i>[cite: 3].</p>
                     
                     <form method="POST" action="">
                         <button type="submit" name="reset_total" class="btn btn-danger w-100 fw-bold py-2 mt-2" onclick="return confirm('PERINGATAN KERAS!\n\nTindakan ini akan MENGHAPUS SEMUA DATA PERMANEN dari sistem (kecuali akun admin).\n\nApakah Anda benar-benar yakin ingin melakukan RESET TOTAL?');">
