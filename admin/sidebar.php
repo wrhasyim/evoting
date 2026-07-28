@@ -99,6 +99,11 @@
         <i class="fas fa-cogs"></i> Pengaturan
     </a>
     
+    <!-- Penambahan Menu Baru: Reset Data -->
+    <a href="reset_suara.php" class="<?= $current_page == 'reset_suara.php' ? 'active text-white' : 'text-danger'; ?>">
+        <i class="fas fa-skull-crossbones"></i> Reset Data
+    </a>
+    
     <a href="../logout.php" class="text-warning mt-4">
         <i class="fas fa-sign-out-alt"></i> Keluar
     </a>

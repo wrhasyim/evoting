@@ -79,6 +79,11 @@ if ($id_eskul_pilih) {
                 <small class="text-muted">Data otomatis diperbarui setiap 30 detik.</small>
             </div>
             <div>
+                <?php if ($id_eskul_pilih): ?>
+            <a href="export_hasil.php?id_eskul=<?= $id_eskul_pilih; ?>" class="btn btn-success me-3">
+                <i class="fas fa-file-excel me-1"></i> Ekspor ke Excel
+            </a>
+        <?php endif; ?>
                 <span class="badge bg-primary p-2 fs-6">
                     <i class="fas fa-envelope-open-text me-1"></i> Total Suara Masuk: <?= $total_suara_masuk; ?>
                 </span>
