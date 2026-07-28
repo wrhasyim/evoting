@@ -24,14 +24,13 @@ if ($periode_aktif) {
     $nama_periode_aktif = "Belum Ada Periode Aktif";
 }
 
-// 1. PROSES TAMBAH SISWA MANUAL (Hanya berjalan jika ada periode aktif)
+// 1. PROSES TAMBAH SISWA MANUAL
 if (isset($_POST['tambah_siswa']) && $id_periode_aktif) {
     $nis = trim($_POST['nis']);
     $nama = trim($_POST['nama_siswa']);
     $kelas = trim($_POST['kelas']);
     $pin = strtoupper(substr(md5(time() . $nis), 0, 5));
 
-    // Cek apakah NIS sudah ada DI PERIODE INI
     $cek_nis = $pdo->prepare("SELECT id_siswa FROM siswa WHERE nis = :nis AND id_periode = :id_periode");
     $cek_nis->execute(['nis' => $nis, 'id_periode' => $id_periode_aktif]);
     
@@ -48,9 +47,8 @@ if (isset($_POST['tambah_siswa']) && $id_periode_aktif) {
 if (isset($_POST['import_csv']) && $id_periode_aktif) {
     $ekstensi_diizinkan = ['csv', 'txt'];
     $nama_file = $_FILES['file_csv']['name'];
-   // Memecah nama file dan menyimpannya ke variabel terlebih dahulu
-$pecah_nama = explode('.', $nama_file);
-$ekstensi_file = strtolower(end($pecah_nama));
+    $pecah_nama = explode('.', $nama_file);
+    $ekstensi_file = strtolower(end($pecah_nama));
     $file_tmp = $_FILES['file_csv']['tmp_name'];
 
     if (in_array($ekstensi_file, $ekstensi_diizinkan) === true) {
@@ -69,7 +67,6 @@ $ekstensi_file = strtolower(end($pecah_nama));
 
                 $pin = strtoupper(substr(md5(time() . $nis), 0, 5));
 
-                // Cek duplikasi NIS khusus untuk periode yang sedang aktif
                 $cek_nis = $pdo->prepare("SELECT id_siswa FROM siswa WHERE nis = :nis AND id_periode = :id_periode");
                 $cek_nis->execute(['nis' => $nis, 'id_periode' => $id_periode_aktif]);
                 
@@ -106,12 +103,24 @@ if (isset($_POST['hapus_siswa'])) {
     $pesan_notifikasi = "<div class='alert alert-warning'>Data siswa telah dipindahkan ke Tempat Sampah.</div>";
 }
 
-// MENGAMBIL DATA SISWA HANYA UNTUK PERIODE YANG AKTIF
+// MENGAMBIL DATA SISWA UNTUK TABEL UTAMA
 $data_siswa = [];
 if ($id_periode_aktif) {
     $stmt_tampil = $pdo->prepare("SELECT * FROM siswa WHERE status_aktif = 1 AND id_periode = :id_periode ORDER BY kelas ASC, nama_siswa ASC");
     $stmt_tampil->execute(['id_periode' => $id_periode_aktif]);
     $data_siswa = $stmt_tampil->fetchAll();
+}
+
+// MENGAMBIL DATA ESKUL UNTUK FILTER DAFTAR HADIR
+$stmt_eskul_filter = $pdo->query("SELECT id_eskul, nama_eskul FROM eskul WHERE status_aktif = 1 ORDER BY nama_eskul ASC");
+$daftar_eskul_filter = $stmt_eskul_filter->fetchAll();
+
+// MENGAMBIL DAFTAR KELAS YANG ADA DI PERIODE INI UNTUK FILTER
+$daftar_kelas_filter = [];
+if ($id_periode_aktif) {
+    $stmt_kelas_filter = $pdo->prepare("SELECT DISTINCT kelas FROM siswa WHERE id_periode = :id_periode AND status_aktif = 1 ORDER BY kelas ASC");
+    $stmt_kelas_filter->execute(['id_periode' => $id_periode_aktif]);
+    $daftar_kelas_filter = $stmt_kelas_filter->fetchAll();
 }
 ?>
 
@@ -151,9 +160,15 @@ if ($id_periode_aktif) {
             </div>
             <div>
                 <?php if ($id_periode_aktif): ?>
+                    
+                    <!-- PEMBARUAN: Tombol Daftar Hadir sekarang membuka Modal Filter -->
+                    <button class="btn btn-outline-success rounded-pill px-3 me-2 fw-bold" data-bs-toggle="modal" data-bs-target="#modalDaftarHadir">
+                        <i class="fas fa-file-pdf me-1"></i> Daftar Hadir
+                    </button>
+                    
                     <a href="cetak_pin.php" target="_blank" class="btn btn-secondary rounded-pill px-3 me-2">
-                <i class="fas fa-print"></i> Cetak PIN
-            </a>
+                        <i class="fas fa-print"></i> Cetak PIN
+                    </a>
                     <button class="btn btn-success rounded-pill px-4 me-2" data-bs-toggle="modal" data-bs-target="#modalImport">
                         <i class="fas fa-file-excel me-2"></i> Import CSV
                     </button>
@@ -197,7 +212,7 @@ if ($id_periode_aktif) {
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-center">
-                                        <!-- Tombol Edit (Gunakan id_siswa, bukan nis) -->
+                                        <!-- Tombol Edit -->
                                         <button class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalEdit<?= $row['id_siswa']; ?>" title="Edit Data">
                                             <i class="fas fa-edit"></i>
                                         </button>
@@ -306,7 +321,7 @@ if ($id_periode_aktif) {
         </div>
     </div>
 
-    <!-- MODAL IMPORT CSV (TELAH DIPERBARUI DENGAN TOMBOL SAMPLE) -->
+    <!-- MODAL IMPORT CSV -->
     <div class="modal fade" id="modalImport" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -318,7 +333,6 @@ if ($id_periode_aktif) {
                     <div class="modal-body">
                         <div class="alert alert-warning small">
                             Pastikan file Anda berformat <b>.csv</b>. Kolom berurutan: NIS, Nama Lengkap, Kelas.<br>
-                            <!-- Tombol Download Sample dengan Data URI -->
                             <a href="data:text/csv;charset=utf-8,NIS,Nama Lengkap,Kelas%0A1001,Budi Santoso,XI RPL 1%0A1002,Siti Aminah,XI TKJ 2" download="format_import_siswa.csv" class="btn btn-sm btn-outline-success mt-3 fw-bold">
                                 <i class="fas fa-download me-1"></i> Download Format Sample
                             </a>
@@ -331,6 +345,45 @@ if ($id_periode_aktif) {
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
                         <button type="submit" name="import_csv" class="btn btn-success">Mulai Import</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- PEMBARUAN: MODAL CETAK DAFTAR HADIR -->
+    <div class="modal fade" id="modalDaftarHadir" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="GET" action="cetak_daftar_hadir.php" target="_blank">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title fw-bold"><i class="fas fa-print me-2"></i> Cetak Daftar Hadir</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Pilih Kategori Cetak</label>
+                            <select name="filter" class="form-select border-success">
+                                <option value="all">Cetak Semua Siswa (Dipisah per Kelas)</option>
+                                
+                                <optgroup label="Cetak Spesifik per Kelas">
+                                    <?php foreach ($daftar_kelas_filter as $kls): ?>
+                                        <option value="kelas_<?= htmlspecialchars($kls['kelas']); ?>">Hanya Kelas <?= htmlspecialchars($kls['kelas']); ?></option>
+                                    <?php endforeach; ?>
+                                </optgroup>
+                                
+                                <optgroup label="Cetak Khusus Anggota Ekstrakurikuler">
+                                    <?php foreach ($daftar_eskul_filter as $eskul): ?>
+                                        <option value="eskul_<?= $eskul['id_eskul']; ?>">Hanya Anggota <?= htmlspecialchars($eskul['nama_eskul']); ?></option>
+                                    <?php endforeach; ?>
+                                </optgroup>
+                                
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-success fw-bold"><i class="fas fa-file-pdf me-2"></i> Buka Halaman Cetak</button>
                     </div>
                 </form>
             </div>
