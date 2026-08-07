@@ -14,8 +14,10 @@ $pesan_notifikasi = '';
 $id_admin = $_SESSION['id_admin'];
 
 // ==========================================
-// FITUR: EXPORT DATABASE (BACKUP)
+// FITUR DARI PENGATURAN LAMA
 // ==========================================
+
+// EXPORT DATABASE
 if (isset($_POST['export_db'])) {
     $tables = [];
     $stmt = $pdo->query("SHOW TABLES");
@@ -61,9 +63,7 @@ if (isset($_POST['export_db'])) {
     exit; 
 }
 
-// ==========================================
-// FITUR: IMPORT DATABASE (RESTORE)
-// ==========================================
+// IMPORT DATABASE
 if (isset($_POST['import_db'])) {
     if (isset($_FILES['file_sql']) && $_FILES['file_sql']['error'] == 0) {
         $file_tmp = $_FILES['file_sql']['tmp_name'];
@@ -80,30 +80,16 @@ if (isset($_POST['import_db'])) {
     }
 }
 
-// ==========================================
-// FITUR: RESET TOTAL SISTEM
-// ==========================================
+// RESET TOTAL SISTEM
 if (isset($_POST['reset_total'])) {
     try {
         $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
-        
-        $tabel_direset = [
-            'suara_masuk', 
-            'riwayat_pilih', 
-            'kandidat', 
-            'anggota_eskul', 
-            'siswa', 
-            'eskul', 
-            'periode'
-        ];
-
+        $tabel_direset = ['suara_masuk', 'riwayat_pilih', 'kandidat', 'anggota_eskul', 'siswa', 'eskul', 'periode'];
         foreach ($tabel_direset as $tabel) {
             $pdo->exec("DELETE FROM $tabel;");
             $pdo->exec("ALTER TABLE $tabel AUTO_INCREMENT = 1;");
         }
-        
         $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
-        
         $pesan_notifikasi = "<div class='alert alert-success fw-bold'><i class='fas fa-check-circle me-2'></i>Sistem berhasil di-reset total! Semua data telah dikosongkan dengan bersih.</div>";
     } catch (PDOException $e) {
         $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
@@ -111,26 +97,17 @@ if (isset($_POST['reset_total'])) {
     }
 }
 
-// ==========================================
-// FITUR BARU: UNGGAH VISUAL (BANNER & LOGO)
-// ==========================================
+// UNGGAH VISUAL (BANNER & LOGO)
 if (isset($_POST['upload_visual'])) {
     $direktori_simpan = '../uploads/';
-    
-    // Pastikan folder uploads ada
-    if (!file_exists($direktori_simpan)) {
-        mkdir($direktori_simpan, 0777, true);
-    }
-    
+    if (!file_exists($direktori_simpan)) { mkdir($direktori_simpan, 0777, true); }
     $ekstensi_valid = ['png', 'jpg', 'jpeg'];
     
-    // Proses Banner
     if (!empty($_FILES['banner_sekolah']['name'])) {
         $nama_file = $_FILES['banner_sekolah']['name'];
         $tmp_file = $_FILES['banner_sekolah']['tmp_name'];
         $ukuran = $_FILES['banner_sekolah']['size'];
         $ekstensi = strtolower(pathinfo($nama_file, PATHINFO_EXTENSION));
-        
         if (in_array($ekstensi, $ekstensi_valid) && $ukuran <= 2097152) {
             $file_tujuan = $direktori_simpan . 'banner_utama.' . $ekstensi;
             array_map('unlink', glob($direktori_simpan . "banner_utama.*"));
@@ -141,13 +118,11 @@ if (isset($_POST['upload_visual'])) {
         }
     }
 
-    // Proses Logo
     if (!empty($_FILES['logo_sekolah']['name'])) {
         $nama_file = $_FILES['logo_sekolah']['name'];
         $tmp_file = $_FILES['logo_sekolah']['tmp_name'];
         $ukuran = $_FILES['logo_sekolah']['size'];
         $ekstensi = strtolower(pathinfo($nama_file, PATHINFO_EXTENSION));
-        
         if (in_array($ekstensi, $ekstensi_valid) && $ukuran <= 1048576) {
             $file_tujuan = $direktori_simpan . 'logo_utama.' . $ekstensi;
             array_map('unlink', glob($direktori_simpan . "logo_utama.*"));
@@ -159,9 +134,7 @@ if (isset($_POST['upload_visual'])) {
     }
 }
 
-// ==========================================
-// PROSES PEMBARUAN PROFIL & PASSWORD
-// ==========================================
+// PEMBARUAN PROFIL & PASSWORD
 if (isset($_POST['simpan_pengaturan'])) {
     $nama_baru = trim($_POST['nama_lengkap']);
     $username_baru = trim($_POST['username']);
@@ -195,6 +168,53 @@ if (isset($_POST['simpan_pengaturan'])) {
     }
 }
 
+// ==========================================
+// FITUR TAMBAHAN DARI RESET_SUARA
+// ==========================================
+
+// RESET DATA SUARA SAJA
+if (isset($_POST['eksekusi_reset_suara'])) {
+    $konfirmasi = trim($_POST['konfirmasi_teks_suara']);
+    if ($konfirmasi === 'RESET') {
+        try {
+            $pdo->beginTransaction();
+            $pdo->exec("DELETE FROM suara_masuk");
+            $pdo->exec("DELETE FROM riwayat_pilih");
+            $pdo->exec("UPDATE siswa SET status_pilih = 0");
+            $pdo->commit();
+            $pesan_notifikasi .= "<div class='alert alert-success fw-bold'><i class='fas fa-check-circle me-2'></i> Berhasil! Seluruh data suara telah dibersihkan. Sistem kembali ke Titik Nol.</div>";
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) { $pdo->rollBack(); }
+            $pesan_notifikasi .= "<div class='alert alert-danger'>Terjadi kesalahan sistem: " . $e->getMessage() . "</div>";
+        }
+    } else {
+        $pesan_notifikasi .= "<div class='alert alert-danger'>Gagal: Kata konfirmasi kotak suara tidak cocok.</div>";
+    }
+}
+
+// HAPUS FOTO KANDIDAT
+if (isset($_POST['eksekusi_hapus_foto'])) {
+    $konfirmasi_foto = trim($_POST['konfirmasi_foto']);
+    if ($konfirmasi_foto === 'HAPUS FOTO') {
+        $folder_uploads = '../uploads/';
+        $files = glob($folder_uploads . '*'); 
+        $jumlah_dihapus = 0;
+        foreach ($files as $file) {
+            if (is_file($file)) {
+                $nama_file = basename($file);
+                if ($nama_file !== '.htaccess' && $nama_file !== 'logo_utama.png' && $nama_file !== 'banner_utama.png' && $nama_file !== 'banner_utama.jpg') {
+                    unlink($file); 
+                    $jumlah_dihapus++;
+                }
+            }
+        }
+        $pdo->exec("UPDATE kandidat SET foto = ''");
+        $pesan_notifikasi .= "<div class='alert alert-success fw-bold'><i class='fas fa-trash-alt me-2'></i> Berhasil! Menghapus $jumlah_dihapus file foto fisik.</div>";
+    } else {
+        $pesan_notifikasi .= "<div class='alert alert-danger'>Gagal: Kata konfirmasi hapus foto tidak cocok.</div>";
+    }
+}
+
 // Mengambil Data Admin Saat Ini
 $stmt = $pdo->prepare("SELECT username, nama_lengkap FROM admin WHERE id_admin = ?");
 $stmt->execute([$id_admin]);
@@ -206,146 +226,159 @@ $data_admin = $stmt->fetch();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pengaturan Sistem - E-Voting</title>
+    <title>Pengaturan Terpadu - E-Voting</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: 'Poppins', sans-serif; background-color: #f4f7fa; overflow-x: hidden; }
-        .sidebar { height: 100vh; background: linear-gradient(180deg, #1a2980 0%, #26d0ce 100%); color: white; padding-top: 30px; position: fixed; width: 260px; box-shadow: 4px 0 15px rgba(0,0,0,0.1); z-index: 100; }
-        .sidebar-brand { font-weight: 700; font-size: 1.3rem; text-align: center; margin-bottom: 30px; display: flex; flex-direction: column; align-items: center; }
-        .sidebar-brand i { font-size: 2rem; margin-bottom: 10px; }
-        .sidebar a { color: rgba(255,255,255,0.85); text-decoration: none; padding: 15px 25px; display: block; font-weight: 500; transition: all 0.3s ease; }
-        .sidebar a i { margin-right: 12px; width: 20px; text-align: center; }
-        .sidebar a:hover, .sidebar .active { background-color: rgba(255,255,255,0.15); color: white; border-left: 5px solid #fff; }
-        .content { margin-left: 260px; padding: 40px; }
+        body { font-family: 'Poppins', sans-serif; background-color: #f4f7fa; padding-top: 80px; }
+        /* Mengubah styling navbar menjadi menempel di atas */
+        .navbar-custom { background: linear-gradient(90deg, #1a2980 0%, #26d0ce 100%); padding: 15px 0; }
+        .navbar-custom .navbar-brand { color: white; font-weight: 700; letter-spacing: 1px; }
+        .navbar-custom .nav-link { color: rgba(255,255,255,0.85); font-weight: 500; margin: 0 5px; border-radius: 5px; transition: all 0.3s ease; }
+        .navbar-custom .nav-link:hover, .navbar-custom .nav-link.active { color: white; background-color: rgba(255,255,255,0.2); }
+        .content-container { padding: 20px; max-width: 1200px; margin: 0 auto; }
         .top-header { background: white; padding: 15px 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
-        .form-container { background: white; border-radius: 15px; padding: 30px; box-shadow: 0 10px 20px rgba(0,0,0,0.04); }
+        .form-container { background: white; border-radius: 15px; padding: 30px; box-shadow: 0 10px 20px rgba(0,0,0,0.04); height: 100%; }
     </style>
 </head>
 <body>
 
-    <!-- MEMANGGIL SIDEBAR -->
-    <?php include 'sidebar.php'; ?>
+    <!-- NAVBAR ATAS (Menggantikan Sidebar) -->
+    <nav class="navbar navbar-expand-lg navbar-custom fixed-top shadow-sm">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand" href="index.php"><i class="fas fa-vote-yea me-2"></i>E-Voting SMK Taruna Karya Mandiri</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon" style="filter: invert(1);"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item"><a class="nav-link" href="index.php"><i class="fas fa-home me-1"></i> Beranda</a></li>
+                    <li class="nav-item"><a class="nav-link" href="kandidat.php"><i class="fas fa-users me-1"></i> Kandidat</a></li>
+                    <li class="nav-item"><a class="nav-link" href="siswa.php"><i class="fas fa-user-graduate me-1"></i> Siswa</a></li>
+                    <li class="nav-item"><a class="nav-link" href="live_count.php"><i class="fas fa-chart-bar me-1"></i> Live Count</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="pengaturan.php"><i class="fas fa-cogs me-1"></i> Pengaturan</a></li>
+                    <li class="nav-item ms-lg-3"><a class="nav-link btn btn-danger text-white px-3" href="../logout.php"><i class="fas fa-sign-out-alt me-1"></i> Keluar</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
 
     <!-- KONTEN UTAMA -->
-    <div class="content">
+    <div class="content-container">
         <div class="top-header">
             <div>
-                <h4 class="m-0 fw-bold" style="color: #2c3e50;">Pengaturan Sistem</h4>
-                <small class="text-muted">Kelola keamanan profil, manajemen cadangan, kustomisasi visual, dan pembersihan data.</small>
+                <h4 class="m-0 fw-bold" style="color: #2c3e50;">Pengaturan Terpadu</h4>
+                <small class="text-muted">Pusat kendali akun, visual, dan pemeliharaan data.</small>
             </div>
         </div>
 
         <?= $pesan_notifikasi; ?>
 
-        <!-- Membagi layar menjadi 2 kolom agar rapi -->
-        <div class="row">
+        <!-- BARIS 1: Profil & Manajemen Database -->
+        <div class="row g-4 mb-4">
             
-            <!-- KOLOM KIRI: Visual & Keamanan -->
-            <div class="col-md-6 mb-4">
-                
-                <!-- Kustomisasi Visual -->
-                <div class="form-container border-top border-info border-5 mb-4 bg-white">
-                    <form method="POST" action="" enctype="multipart/form-data">
-                        <h5 class="fw-bold mb-4 border-bottom pb-2 text-info"><i class="fas fa-paint-brush me-2"></i> Kustomisasi Visual</h5>
-                        
-                        <div class="mb-4">
-                            <label class="form-label fw-medium">Banner Header Pemilihan</label>
-                            <input type="file" name="banner_sekolah" class="form-control" accept=".jpg, .jpeg, .png">
-                            <small class="text-muted d-block mt-1">Rekomendasi ukuran: 1200x300 pixel (Landscape). Maksimal 2MB.</small>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <label class="form-label fw-medium">Logo Resmi Sekolah</label>
-                            <input type="file" name="logo_sekolah" class="form-control" accept=".png">
-                            <small class="text-muted d-block mt-1">Rekomendasi format PNG (latar transparan). Maksimal 1MB.</small>
-                        </div>
-
-                        <button type="submit" name="upload_visual" class="btn btn-info text-white w-100 fw-bold py-2 mt-2">
-                            <i class="fas fa-upload me-2"></i> Simpan Visual
-                        </button>
-                    </form>
-                </div>
-
-                <!-- Keamanan Akun -->
+            <!-- Keamanan Akun -->
+            <div class="col-lg-6">
                 <div class="form-container border-top border-primary border-5 bg-white">
                     <form method="POST" action="">
                         <h5 class="fw-bold mb-4 border-bottom pb-2 text-primary"><i class="fas fa-user-shield me-2"></i> Keamanan Akun</h5>
-                        
                         <div class="mb-3">
                             <label class="form-label fw-medium">Nama Lengkap</label>
                             <input type="text" name="nama_lengkap" class="form-control" value="<?= htmlspecialchars($data_admin['nama_lengkap']); ?>" required>
                         </div>
-                        
                         <div class="mb-4">
                             <label class="form-label fw-medium">Username Login</label>
                             <input type="text" name="username" class="form-control" value="<?= htmlspecialchars($data_admin['username']); ?>" required>
                         </div>
-
-                        <div class="alert alert-warning small">
-                            Kosongkan kolom <b>Password Baru</b> jika Anda hanya ingin mengubah Nama/Username.
-                        </div>
-
+                        <div class="alert alert-warning small">Kosongkan kolom <b>Password Baru</b> jika hanya mengubah teks di atas.</div>
                         <div class="mb-3">
                             <label class="form-label fw-medium">Password Baru</label>
-                            <input type="password" name="password_baru" class="form-control" placeholder="Masukkan kata sandi baru (Opsional)">
+                            <input type="password" name="password_baru" class="form-control" placeholder="Opsional">
                         </div>
-                        
                         <div class="mb-4">
                             <label class="form-label fw-medium">Konfirmasi Password Baru</label>
-                            <input type="password" name="konfirmasi_password" class="form-control" placeholder="Ketik ulang kata sandi baru">
+                            <input type="password" name="konfirmasi_password" class="form-control" placeholder="Opsional">
                         </div>
-
                         <div class="mb-4 p-3 bg-light rounded border border-danger">
                             <label class="form-label fw-bold text-danger"><i class="fas fa-key me-2"></i>Otorisasi Perubahan</label>
-                            <p class="small text-muted mb-2">Masukkan kata sandi Anda saat ini untuk menyimpan pembaruan.</p>
-                            <input type="password" name="password_lama" class="form-control border-danger" placeholder="Password saat ini" required>
+                            <input type="password" name="password_lama" class="form-control border-danger" placeholder="Masukkan Password saat ini" required>
                         </div>
-
-                        <button type="submit" name="simpan_pengaturan" class="btn btn-primary w-100 fw-bold py-2">
-                            <i class="fas fa-save me-2"></i> Simpan Profil
-                        </button>
+                        <button type="submit" name="simpan_pengaturan" class="btn btn-primary w-100 fw-bold py-2"><i class="fas fa-save me-2"></i> Simpan Profil</button>
                     </form>
                 </div>
             </div>
 
-            <!-- KOLOM KANAN: Export, Import & Reset Database -->
-            <div class="col-md-6 mb-4">
-                <div class="form-container border-top border-success border-5 mb-4 bg-white">
-                    <h5 class="fw-bold mb-4 border-bottom pb-2"><i class="fas fa-database me-2"></i> Manajemen Database</h5>
-                    <p class="text-muted small">Cegah kehilangan data dengan melakukan pencadangan (Backup) secara rutin. Anda dapat memulihkan (Restore) sistem menggunakan file .sql hasil unduhan Anda[cite: 3].</p>
-                    
-                    <!-- Form Export (Download) -->
-                    <form method="POST" action="" class="mb-4">
-                        <button type="submit" name="export_db" class="btn btn-success w-100 fw-bold py-3 shadow-sm">
-                            <i class="fas fa-download me-2 fs-5"></i> Download Backup Data (.sql)
-                        </button>
-                    </form>
-
-                    <!-- Form Import (Restore) -->
-                    <form method="POST" action="" enctype="multipart/form-data" class="bg-light p-3 border rounded">
-                        <h6 class="fw-bold text-dark"><i class="fas fa-upload me-2"></i> Restore Database</h6>
+            <!-- Database & Visual -->
+            <div class="col-lg-6">
+                <!-- Visual -->
+                <div class="form-container border-top border-info border-5 mb-4 bg-white" style="height: auto;">
+                    <form method="POST" action="" enctype="multipart/form-data">
+                        <h5 class="fw-bold mb-3 border-bottom pb-2 text-info"><i class="fas fa-paint-brush me-2"></i> Kustomisasi Visual</h5>
                         <div class="mb-3">
-                            <label class="form-label small">Pilih File Cadangan (.sql)</label>
-                            <input type="file" name="file_sql" class="form-control" accept=".sql" required>
-                            <small class="text-danger mt-2 d-block"><b>Peringatan:</b> Melakukan restore akan menimpa seluruh data saat ini[cite: 3].</small>
+                            <label class="form-label small fw-medium">Banner Sekolah (JPG/PNG, Max 2MB)</label>
+                            <input type="file" name="banner_sekolah" class="form-control form-control-sm" accept=".jpg, .jpeg, .png">
                         </div>
-                        <button type="submit" name="import_db" class="btn btn-outline-dark w-100 fw-bold" onclick="return confirm('Semua data saat ini akan terganti. Anda yakin?');">
-                            Mulai Restore
-                        </button>
+                        <div class="mb-3">
+                            <label class="form-label small fw-medium">Logo Sekolah (PNG, Max 1MB)</label>
+                            <input type="file" name="logo_sekolah" class="form-control form-control-sm" accept=".png">
+                        </div>
+                        <button type="submit" name="upload_visual" class="btn btn-info text-white w-100 fw-bold"><i class="fas fa-upload me-2"></i> Simpan Visual</button>
                     </form>
                 </div>
 
-                <!-- KOTAK RESET TOTAL -->
-                <div class="form-container border-top border-danger border-5 bg-white">
-                    <h5 class="fw-bold text-danger mb-3 border-bottom pb-2"><i class="fas fa-skull-crossbones me-2"></i> Reset Total Sistem</h5>
-                    <p class="text-muted small">Gunakan fitur ini untuk <b>mengosongkan seluruh isi sistem</b> (Data Tahun Ajaran, Eskul, Siswa, Kandidat, dan Suara Pemilih). Sangat berguna setelah melakukan uji coba menggunakan data <i>dummy</i>[cite: 3].</p>
-                    
+                <!-- Backup & Restore -->
+                <div class="form-container border-top border-success border-5 bg-white" style="height: auto;">
+                    <h5 class="fw-bold mb-3 border-bottom pb-2 text-success"><i class="fas fa-database me-2"></i> Manajemen Database</h5>
+                    <form method="POST" action="" class="mb-3">
+                        <button type="submit" name="export_db" class="btn btn-success w-100 fw-bold"><i class="fas fa-download me-2"></i> Download Backup (.sql)</button>
+                    </form>
+                    <form method="POST" action="" enctype="multipart/form-data" class="bg-light p-2 border rounded">
+                        <input type="file" name="file_sql" class="form-control form-control-sm mb-2" accept=".sql" required>
+                        <button type="submit" name="import_db" class="btn btn-outline-dark btn-sm w-100 fw-bold" onclick="return confirm('Semua data saat ini akan terganti. Anda yakin?');">Mulai Restore</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- BARIS 2: Maintenance Area (Dari Reset Suara) -->
+        <h5 class="fw-bold text-danger mt-4 mb-3 border-bottom border-danger pb-2"><i class="fas fa-tools me-2"></i> Area Berbahaya (Maintenance)</h5>
+        <div class="row g-4 mb-5">
+            
+            <!-- Reset Kotak Suara -->
+            <div class="col-md-4">
+                <div class="form-container border-top border-warning border-5 text-center">
+                    <i class="fas fa-box-open text-warning fs-1 mb-2"></i>
+                    <h6 class="fw-bold text-warning">Reset Kotak Suara</h6>
+                    <p class="small text-muted mb-3">Menghapus perolehan suara saja. Ideal setelah simulasi.</p>
                     <form method="POST" action="">
-                        <button type="submit" name="reset_total" class="btn btn-danger w-100 fw-bold py-2 mt-2" onclick="return confirm('PERINGATAN KERAS!\n\nTindakan ini akan MENGHAPUS SEMUA DATA PERMANEN dari sistem (kecuali akun admin).\n\nApakah Anda benar-benar yakin ingin melakukan RESET TOTAL?');">
-                            <i class="fas fa-trash-alt me-2"></i> KOSONGKAN SEMUA DATA
-                        </button>
+                        <input type="text" name="konfirmasi_teks_suara" class="form-control form-control-sm text-center fw-bold border-warning mb-2" placeholder="Ketik RESET" required>
+                        <button type="submit" name="eksekusi_reset_suara" class="btn btn-warning btn-sm w-100 fw-bold text-dark"><i class="fas fa-eraser me-1"></i> Kosongkan Suara</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Bersihkan Foto -->
+            <div class="col-md-4">
+                <div class="form-container border-top border-secondary border-5 text-center">
+                    <i class="fas fa-images text-secondary fs-1 mb-2"></i>
+                    <h6 class="fw-bold text-secondary">Bersihkan Foto</h6>
+                    <p class="small text-muted mb-3">Menghapus file fisik foto kandidat lama (Logo/Banner tetap aman).</p>
+                    <form method="POST" action="">
+                        <input type="text" name="konfirmasi_foto" class="form-control form-control-sm text-center fw-bold border-secondary mb-2" placeholder="Ketik HAPUS FOTO" required>
+                        <button type="submit" name="eksekusi_hapus_foto" class="btn btn-secondary btn-sm w-100 fw-bold"><i class="fas fa-broom me-1"></i> Bersihkan Storage</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Reset Total -->
+            <div class="col-md-4">
+                <div class="form-container border-top border-danger border-5 text-center bg-light">
+                    <i class="fas fa-skull-crossbones text-danger fs-1 mb-2"></i>
+                    <h6 class="fw-bold text-danger">Reset Total Sistem</h6>
+                    <p class="small text-muted mb-3">Mengosongkan SEMUA data siswa, kandidat, dan suara.</p>
+                    <form method="POST" action="">
+                        <button type="submit" name="reset_total" class="btn btn-danger btn-sm w-100 fw-bold mt-4" onclick="return confirm('PERINGATAN KERAS! Semua data akan hilang permanen. Yakin?');"><i class="fas fa-trash-alt me-1"></i> RESET TOTAL</button>
                     </form>
                 </div>
             </div>
