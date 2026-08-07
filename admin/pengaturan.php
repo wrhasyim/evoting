@@ -14,7 +14,7 @@ $pesan_notifikasi = '';
 $id_admin = $_SESSION['id_admin'];
 
 // ==========================================
-// FITUR DARI PENGATURAN LAMA
+// FITUR MANAJEMEN DATABASE
 // ==========================================
 
 // EXPORT DATABASE
@@ -169,7 +169,7 @@ if (isset($_POST['simpan_pengaturan'])) {
 }
 
 // ==========================================
-// FITUR TAMBAHAN DARI RESET_SUARA
+// FITUR TAMBAHAN MAINTENANCE
 // ==========================================
 
 // RESET DATA SUARA SAJA
@@ -231,41 +231,22 @@ $data_admin = $stmt->fetch();
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: 'Poppins', sans-serif; background-color: #f4f7fa; padding-top: 80px; }
-        /* Mengubah styling navbar menjadi menempel di atas */
-        .navbar-custom { background: linear-gradient(90deg, #1a2980 0%, #26d0ce 100%); padding: 15px 0; }
-        .navbar-custom .navbar-brand { color: white; font-weight: 700; letter-spacing: 1px; }
-        .navbar-custom .nav-link { color: rgba(255,255,255,0.85); font-weight: 500; margin: 0 5px; border-radius: 5px; transition: all 0.3s ease; }
-        .navbar-custom .nav-link:hover, .navbar-custom .nav-link.active { color: white; background-color: rgba(255,255,255,0.2); }
-        .content-container { padding: 20px; max-width: 1200px; margin: 0 auto; }
+        body { font-family: 'Poppins', sans-serif; background-color: #f4f7fa; overflow-x: hidden; }
+        
+        /* SOLUSI NAVBAR MELAR: Mencegah teks navbar turun ke baris baru */
+        .nav-link { white-space: nowrap !important; }
+
         .top-header { background: white; padding: 15px 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
         .form-container { background: white; border-radius: 15px; padding: 30px; box-shadow: 0 10px 20px rgba(0,0,0,0.04); height: 100%; }
     </style>
 </head>
 <body>
 
-    <!-- NAVBAR ATAS (Menggantikan Sidebar) -->
-    <nav class="navbar navbar-expand-lg navbar-custom fixed-top shadow-sm">
-        <div class="container-fluid px-4">
-            <a class="navbar-brand" href="index.php"><i class="fas fa-vote-yea me-2"></i>E-Voting SMK Taruna Karya Mandiri</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon" style="filter: invert(1);"></span>
-            </button>
-            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-                <ul class="navbar-nav">
-                    <li class="nav-item"><a class="nav-link" href="index.php"><i class="fas fa-home me-1"></i> Beranda</a></li>
-                    <li class="nav-item"><a class="nav-link" href="kandidat.php"><i class="fas fa-users me-1"></i> Kandidat</a></li>
-                    <li class="nav-item"><a class="nav-link" href="siswa.php"><i class="fas fa-user-graduate me-1"></i> Siswa</a></li>
-                    <li class="nav-item"><a class="nav-link" href="live_count.php"><i class="fas fa-chart-bar me-1"></i> Live Count</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="pengaturan.php"><i class="fas fa-cogs me-1"></i> Pengaturan</a></li>
-                    <li class="nav-item ms-lg-3"><a class="nav-link btn btn-danger text-white px-3" href="../logout.php"><i class="fas fa-sign-out-alt me-1"></i> Keluar</a></li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    <!-- MEMANGGIL NAVBAR DARI FILE SIDEBAR -->
+    <?php include 'sidebar.php'; ?>
 
-    <!-- KONTEN UTAMA -->
-    <div class="content-container">
+    <!-- KONTEN UTAMA DIBUNGKUS CLASS .content -->
+    <div class="content">
         <div class="top-header">
             <div>
                 <h4 class="m-0 fw-bold" style="color: #2c3e50;">Pengaturan Terpadu</h4>
@@ -285,11 +266,11 @@ $data_admin = $stmt->fetch();
                         <h5 class="fw-bold mb-4 border-bottom pb-2 text-primary"><i class="fas fa-user-shield me-2"></i> Keamanan Akun</h5>
                         <div class="mb-3">
                             <label class="form-label fw-medium">Nama Lengkap</label>
-                            <input type="text" name="nama_lengkap" class="form-control" value="<?= htmlspecialchars($data_admin['nama_lengkap']); ?>" required>
+                            <input type="text" name="nama_lengkap" class="form-control" value="<?= htmlspecialchars($data_admin['nama_lengkap'] ?? ''); ?>" required>
                         </div>
                         <div class="mb-4">
                             <label class="form-label fw-medium">Username Login</label>
-                            <input type="text" name="username" class="form-control" value="<?= htmlspecialchars($data_admin['username']); ?>" required>
+                            <input type="text" name="username" class="form-control" value="<?= htmlspecialchars($data_admin['username'] ?? ''); ?>" required>
                         </div>
                         <div class="alert alert-warning small">Kosongkan kolom <b>Password Baru</b> jika hanya mengubah teks di atas.</div>
                         <div class="mb-3">
@@ -341,7 +322,7 @@ $data_admin = $stmt->fetch();
             </div>
         </div>
 
-        <!-- BARIS 2: Maintenance Area (Dari Reset Suara) -->
+        <!-- BARIS 2: Maintenance Area -->
         <h5 class="fw-bold text-danger mt-4 mb-3 border-bottom border-danger pb-2"><i class="fas fa-tools me-2"></i> Area Berbahaya (Maintenance)</h5>
         <div class="row g-4 mb-5">
             
@@ -386,6 +367,7 @@ $data_admin = $stmt->fetch();
         </div>
     </div>
 
+    <!-- Script Bootstrap Wajib untuk fungsionalitas Dropdown menu Profil -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

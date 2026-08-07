@@ -25,7 +25,7 @@ $id_eskul_pilih = isset($_GET['id_eskul']) ? $_GET['id_eskul'] : (count($daftar_
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { font-family: 'Poppins', sans-serif; background-color: #f4f7fa; overflow-x: hidden; }
-        .content { margin-left: 260px; padding: 40px; }
+        /* CSS .content lama dihapus agar tidak bentrok dengan sidebar.php */
         .top-header { background: white; padding: 15px 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
         .card-hasil { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 10px 20px rgba(0,0,0,0.04); margin-bottom: 20px; }
         .foto-kandidat { width: 80px; height: 80px; object-fit: cover; border-radius: 50%; border: 3px solid #f8f9fa; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
@@ -35,7 +35,7 @@ $id_eskul_pilih = isset($_GET['id_eskul']) ? $_GET['id_eskul'] : (count($daftar_
 </head>
 <body>
 
-    <!-- MEMANGGIL SIDEBAR -->
+    <!-- MEMANGGIL SIDEBAR (NAVBAR ATAS) -->
     <?php include 'sidebar.php'; ?>
 
     <div class="content">
@@ -177,5 +177,8 @@ $id_eskul_pilih = isset($_GET['id_eskul']) ? $_GET['id_eskul'] : (count($daftar_
         // Atur agar fungsi berjalan otomatis setiap 3000 milidetik (3 detik)
         setInterval(muatDataRealtime, 3000);
     </script>
+    
+    <!-- Script Bootstrap Wajib untuk fungsionalitas Dropdown menu Profil -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
