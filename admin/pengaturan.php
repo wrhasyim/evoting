@@ -97,26 +97,13 @@ if (isset($_POST['reset_total'])) {
     }
 }
 
-// UNGGAH VISUAL (BANNER & LOGO)
+// UNGGAH VISUAL (LOGO SAJA)
 if (isset($_POST['upload_visual'])) {
     $direktori_simpan = '../uploads/';
     if (!file_exists($direktori_simpan)) { mkdir($direktori_simpan, 0777, true); }
     $ekstensi_valid = ['png', 'jpg', 'jpeg'];
     
-    if (!empty($_FILES['banner_sekolah']['name'])) {
-        $nama_file = $_FILES['banner_sekolah']['name'];
-        $tmp_file = $_FILES['banner_sekolah']['tmp_name'];
-        $ukuran = $_FILES['banner_sekolah']['size'];
-        $ekstensi = strtolower(pathinfo($nama_file, PATHINFO_EXTENSION));
-        if (in_array($ekstensi, $ekstensi_valid) && $ukuran <= 2097152) {
-            $file_tujuan = $direktori_simpan . 'banner_utama.' . $ekstensi;
-            array_map('unlink', glob($direktori_simpan . "banner_utama.*"));
-            move_uploaded_file($tmp_file, $file_tujuan);
-            $pesan_notifikasi .= "<div class='alert alert-success'>Banner berhasil diperbarui!</div>";
-        } else {
-            $pesan_notifikasi .= "<div class='alert alert-danger'>Format banner harus JPG/PNG dan maksimal 2MB.</div>";
-        }
-    }
+    // Fitur unggah banner telah dihapus dari sini
 
     if (!empty($_FILES['logo_sekolah']['name'])) {
         $nama_file = $_FILES['logo_sekolah']['name'];
@@ -202,7 +189,8 @@ if (isset($_POST['eksekusi_hapus_foto'])) {
         foreach ($files as $file) {
             if (is_file($file)) {
                 $nama_file = basename($file);
-                if ($nama_file !== '.htaccess' && $nama_file !== 'logo_utama.png' && $nama_file !== 'banner_utama.png' && $nama_file !== 'banner_utama.jpg') {
+                // Menambahkan banner_utama.* ke dalam pengecualian penghapusan jika sewaktu-waktu file lamanya masih ada
+                if ($nama_file !== '.htaccess' && $nama_file !== 'logo_utama.png' && $nama_file !== 'logo_utama.jpg' && $nama_file !== 'logo_utama.jpeg' && $nama_file !== 'banner_utama.png' && $nama_file !== 'banner_utama.jpg') {
                     unlink($file); 
                     $jumlah_dihapus++;
                 }
@@ -292,17 +280,14 @@ $data_admin = $stmt->fetch();
 
             <!-- Database & Visual -->
             <div class="col-lg-6">
-                <!-- Visual -->
+                <!-- Visual (Hanya Logo) -->
                 <div class="form-container border-top border-info border-5 mb-4 bg-white" style="height: auto;">
                     <form method="POST" action="" enctype="multipart/form-data">
                         <h5 class="fw-bold mb-3 border-bottom pb-2 text-info"><i class="fas fa-paint-brush me-2"></i> Kustomisasi Visual</h5>
+                        <!-- Input untuk Banner telah dihapus -->
                         <div class="mb-3">
-                            <label class="form-label small fw-medium">Banner Sekolah (JPG/PNG, Max 2MB)</label>
-                            <input type="file" name="banner_sekolah" class="form-control form-control-sm" accept=".jpg, .jpeg, .png">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-medium">Logo Sekolah (PNG, Max 1MB)</label>
-                            <input type="file" name="logo_sekolah" class="form-control form-control-sm" accept=".png">
+                            <label class="form-label small fw-medium">Logo Sekolah (PNG/JPG, Max 1MB)</label>
+                            <input type="file" name="logo_sekolah" class="form-control form-control-sm" accept=".png, .jpg, .jpeg">
                         </div>
                         <button type="submit" name="upload_visual" class="btn btn-info text-white w-100 fw-bold"><i class="fas fa-upload me-2"></i> Simpan Visual</button>
                     </form>

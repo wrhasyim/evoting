@@ -12,6 +12,20 @@ if (!isset($_SESSION['admin_logged_in'])) {
 
 $pesan_notifikasi = '';
 
+// ==========================================
+// FUNGSI BARU: PEMBUAT PIN ACAK YANG UNIK
+// ==========================================
+function buatPinAcak($panjang = 6) {
+    // Kumpulan karakter yang digunakan (Sengaja menghindari 0, O, 1, dan I agar siswa tidak salah baca)
+    $karakter = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+    $pin = '';
+    $max = strlen($karakter) - 1;
+    for ($i = 0; $i < $panjang; $i++) {
+        $pin .= $karakter[random_int(0, $max)];
+    }
+    return $pin;
+}
+
 // MENCARI PERIODE YANG SEDANG AKTIF
 $stmt_periode = $pdo->query("SELECT id_periode, nama_periode FROM periode WHERE status_aktif = 1 LIMIT 1");
 $periode_aktif = $stmt_periode->fetch();
@@ -29,7 +43,9 @@ if (isset($_POST['tambah_siswa']) && $id_periode_aktif) {
     $nis = trim($_POST['nis']);
     $nama = trim($_POST['nama_siswa']);
     $kelas = trim($_POST['kelas']);
-    $pin = strtoupper(substr(md5(time() . $nis), 0, 5));
+    
+    // PEMBARUAN: Memanggil fungsi pembuat PIN baru yang lebih acak
+    $pin = buatPinAcak(6);
 
     $cek_nis = $pdo->prepare("SELECT id_siswa FROM siswa WHERE nis = :nis AND id_periode = :id_periode");
     $cek_nis->execute(['nis' => $nis, 'id_periode' => $id_periode_aktif]);
@@ -65,7 +81,8 @@ if (isset($_POST['import_csv']) && $id_periode_aktif) {
                 $kelas = trim($data[2]);
                 if (empty($nis)) continue; 
 
-                $pin = strtoupper(substr(md5(time() . $nis), 0, 5));
+                // PEMBARUAN: Memanggil fungsi pembuat PIN baru yang lebih acak
+                $pin = buatPinAcak(6);
 
                 $cek_nis = $pdo->prepare("SELECT id_siswa FROM siswa WHERE nis = :nis AND id_periode = :id_periode");
                 $cek_nis->execute(['nis' => $nis, 'id_periode' => $id_periode_aktif]);
@@ -161,7 +178,6 @@ if ($id_periode_aktif) {
             <div>
                 <?php if ($id_periode_aktif): ?>
                     
-                    <!-- PEMBARUAN: Tombol Daftar Hadir sekarang membuka Modal Filter -->
                     <button class="btn btn-outline-success rounded-pill px-3 me-2 fw-bold" data-bs-toggle="modal" data-bs-target="#modalDaftarHadir">
                         <i class="fas fa-file-pdf me-1"></i> Daftar Hadir
                     </button>
@@ -203,7 +219,7 @@ if ($id_periode_aktif) {
                                     <td class="fw-bold"><?= htmlspecialchars($row['nis']); ?></td>
                                     <td><?= htmlspecialchars($row['nama_siswa']); ?></td>
                                     <td><span class="badge bg-secondary"><?= htmlspecialchars($row['kelas']); ?></span></td>
-                                    <td><code class="fs-6 text-primary"><?= htmlspecialchars($row['pin']); ?></code></td>
+                                    <td><code class="fs-6 text-primary fw-bold"><?= htmlspecialchars($row['pin']); ?></code></td>
                                     <td>
                                         <?php if ($row['status_pilih'] == 1): ?>
                                             <span class="badge bg-success"><i class="fas fa-check"></i> Sudah</span>
@@ -351,7 +367,7 @@ if ($id_periode_aktif) {
         </div>
     </div>
 
-    <!-- PEMBARUAN: MODAL CETAK DAFTAR HADIR -->
+    <!-- MODAL CETAK DAFTAR HADIR -->
     <div class="modal fade" id="modalDaftarHadir" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
