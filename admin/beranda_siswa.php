@@ -34,12 +34,11 @@ $id_siswa = $siswa['id_siswa'];
 
 // 4. CEK APAKAH SUDAH MEMILIH SEMUA (KUNCI GLOBAL)
 if ($siswa['status_pilih'] == 1) {
-    // PERBAIKAN: Langsung arahkan ke logout jika siswa yang sudah memilih mencoba masuk lagi
     header("Location: ../logout.php");
     exit;
 }
 
-// 5. MENGAMBIL DAFTAR ESKUL YANG BERHAK DIPILIH (Sedang Dibuka & Belum Dicoblos Siswa Ini)
+// 5. MENGAMBIL DAFTAR ESKUL YANG BERHAK DIPILIH
 $stmt_hak_pilih = $pdo->prepare("
     SELECT e.id_eskul, e.nama_eskul 
     FROM eskul e 
@@ -65,22 +64,18 @@ if (isset($_POST['submit_vote'])) {
             $pdo->beginTransaction();
 
             foreach ($pilihan as $id_eskul => $id_kandidat) {
-                // A. Catat Suara (Rahasia)
                 $stmt_suara = $pdo->prepare("INSERT INTO suara_masuk (id_eskul, id_kandidat) VALUES (?, ?)");
                 $stmt_suara->execute([$id_eskul, $id_kandidat]);
 
-                // B. Catat Riwayat (Identitas)
                 $stmt_riwayat = $pdo->prepare("INSERT INTO riwayat_pilih (id_siswa, id_eskul) VALUES (?, ?)");
                 $stmt_riwayat->execute([$id_siswa, $id_eskul]);
             }
 
-            // C. Kunci Status Siswa (Pernah Memilih)
             $stmt_lock = $pdo->prepare("UPDATE siswa SET status_pilih = 1 WHERE id_siswa = ?");
             $stmt_lock->execute([$id_siswa]);
 
             $pdo->commit();
             
-            // PERBAIKAN: Arahkan langsung ke halaman logout setelah selesai memilih
             header("Location: ../logout.php");
             exit;
 
@@ -103,89 +98,112 @@ if (isset($_POST['submit_vote'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { font-family: 'Poppins', sans-serif; background-color: #f4f7fa; padding-bottom: 50px; }
-        .header-area { color: white; padding: 30px 0; border-bottom-left-radius: 30px; border-bottom-right-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 40px; }
         
-        .card-kandidat { 
-            border: 2px solid #e9ecef; 
-            border-radius: 15px; 
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); 
-            cursor: pointer; 
-            height: 100%; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
-            background-color: white;
+        .siswa-navbar { background-color: #ffffff; box-shadow: 0 2px 10px rgba(0,0,0,0.05); padding: 10px 0; z-index: 1050; }
+
+        .logo-sekolah { 
+            height: 55px; 
+            object-fit: contain; 
+            transform: scale(1.4); 
+            transform-origin: left center; 
+            margin-right: 15px; 
         }
-        .card-kandidat:hover { 
-            transform: translateY(-5px); 
-            border-color: #0d6efd;
-            box-shadow: 0 10px 25px rgba(13,110,253,0.15); 
-        }
-        
-        /* Kelas ketika kartu berhasil di-klik (Dipilih) */
-        .card-kandidat.selected { 
-            border: 3px solid #198754 !important; 
-            background-color: #f0fff4 !important; 
-            transform: scale(1.03) !important; 
-            box-shadow: 0 15px 30px rgba(25,135,84,0.3) !important; 
+
+        .welcome-card {
+            background: #ffffff; border-radius: 12px; padding: 15px 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+            display: flex; justify-content: space-between; align-items: center; 
+            margin-top: 20px; margin-bottom: 30px;
+            border-top: 4px solid #1a2980;
         }
         
-        .foto-kandidat { width: 100%; height: 250px; object-fit: cover; border-top-left-radius: 13px; border-top-right-radius: 13px; }
-        .no-urut { position: absolute; top: 10px; right: 10px; background: #dc3545; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 2; }
-        .radio-hidden { display: none; }
-        .section-title { font-weight: 700; color: #2c3e50; border-bottom: 3px solid #007bff; display: inline-block; padding-bottom: 5px; margin-bottom: 25px; }
-        
-        .wizard-step { animation: fadeIn 0.4s; }
+        .wizard-step { animation: fadeIn 0.4s; padding: 25px !important; margin-bottom: 20px !important; }
         @keyframes fadeIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+        .section-title { font-weight: 700; font-size: 1.25rem; color: #2c3e50; border-bottom: 3px solid #007bff; display: inline-block; padding-bottom: 3px; margin-bottom: 20px; }
+
+        .card-kandidat { 
+            border: 2px solid #e9ecef; border-radius: 12px; transition: all 0.2s ease; 
+            cursor: pointer; height: 100%; box-shadow: 0 2px 8px rgba(0,0,0,0.04); background-color: white;
+            overflow: hidden; /* Mencegah foto keluar dari lekukan radius */
+        }
+        .card-kandidat:hover { transform: translateY(-5px); border-color: #0d6efd; box-shadow: 0 8px 20px rgba(13,110,253,0.15); }
+        .card-kandidat.selected { border: 3px solid #198754 !important; background-color: #f0fff4 !important; transform: scale(1.02) !important; box-shadow: 0 10px 20px rgba(25,135,84,0.2) !important; }
         
-        .btn-pilih-ui { transition: all 0.3s ease; }
+        /* FOTO KANDIDAT DIPERBAIKI */
+        .foto-kandidat { 
+            width: 100%; 
+            height: 280px; /* Dikembalikan ke proporsi potret yang pas */
+            object-fit: contain; /* Mencegah foto terpotong (zoom in) */
+            background-color: #f8f9fa; /* Latar abu-abu agar terlihat rapi seperti studio */
+            border-bottom: 1px solid #e9ecef; /* Garis pemisah antara foto dan teks */
+        }
+        
+        .no-urut { position: absolute; top: 12px; right: 12px; background: #dc3545; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 2; }
+        .radio-hidden { display: none; }
+        
+        .card-body { padding: 15px; }
+        .card-title { font-size: 1.15rem; margin-bottom: 2px; }
+        .btn-pilih-ui { transition: all 0.3s ease; font-size: 0.95rem; padding: 8px; }
+
+        @media (max-width: 768px) {
+            .welcome-card { flex-direction: column; text-align: center; gap: 10px; }
+            .logo-sekolah { transform: scale(1.2); }
+        }
     </style>
 </head>
 <body>
 
     <?php
-    // Logika cerdas untuk mendeteksi ketersediaan banner dan logo
-    $banner_file = glob("../uploads/banner_utama.*");
     $logo_file = glob("../uploads/logo_utama.*");
-    
-    $banner_url = !empty($banner_file) ? $banner_file[0] : null;
     $logo_url = !empty($logo_file) ? $logo_file[0] : null;
-    
-    // Jika ada banner, gunakan sebagai background
-    $header_style = $banner_url 
-        ? "background: linear-gradient(rgba(26, 41, 128, 0.8), rgba(38, 208, 206, 0.8)), url('{$banner_url}') center/cover no-repeat;" 
-        : "background: linear-gradient(135deg, #1a2980, #26d0ce);";
+    $logo_version = $logo_url ? filemtime($logo_url) : '1';
     ?>
 
-    <div class="header-area text-center" style="<?= $header_style; ?>">
-        <div class="container">
-            <!-- Menampilkan Logo Jika Ada -->
-            <?php if ($logo_url): ?>
-                <img src="<?= $logo_url; ?>" alt="Logo Sekolah" style="max-height: 80px; margin-bottom: 15px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));">
-            <?php else: ?>
-                <h2 class="fw-bold"><i class="fas fa-vote-yea me-2"></i> E-Voting SMK TARUNA KARYA MANDIRI</h2>
-            <?php endif; ?>
-            
-            <p class="mb-0 fs-5 text-white">Selamat datang, <b class="text-warning"><?= htmlspecialchars($siswa['nama_siswa']); ?></b></p>
-            <span class="badge bg-light text-dark mt-2 px-3 py-2 border border-white">Periode: <?= htmlspecialchars($periode_aktif['nama_periode']); ?></span>
-            
-            <div class="mt-3">
-                <a href="../logout.php" class="btn btn-outline-light btn-sm rounded-pill px-3">
-                    <i class="fas fa-sign-out-alt"></i> Keluar
-                </a>
+    <!-- NAVBAR ATAS SISWA -->
+    <nav class="siswa-navbar sticky-top">
+        <div class="container d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <?php if ($logo_url): ?>
+                    <img src="<?= $logo_url; ?>?v=<?= $logo_version; ?>" class="logo-sekolah" alt="Logo Sekolah">
+                <?php endif; ?>
+                <div class="fw-bold fs-5 text-primary d-none d-sm-block" style="line-height: 1.2;">
+                    E-Voting SMK <br> Taruna Karya Mandiri
+                </div>
+                <div class="fw-bold fs-5 text-primary d-block d-sm-none">
+                    E-Voting
+                </div>
             </div>
+            <a href="../logout.php" class="btn btn-outline-danger btn-sm rounded-pill px-4 fw-bold">
+                <i class="fas fa-sign-out-alt me-1"></i> Keluar
+            </a>
         </div>
-    </div>
+    </nav>
 
     <div class="container">
+        
+        <!-- KARTU SAMBUTAN -->
+        <div class="welcome-card">
+            <div>
+                <h5 class="mb-1 text-dark">Selamat datang, <span class="fw-bold text-primary"><?= htmlspecialchars($siswa['nama_siswa']); ?></span></h5>
+                <small class="text-muted">Gunakan hak suara Anda dengan bijak dan rahasia.</small>
+            </div>
+            <div>
+                <span class="badge bg-light text-dark border border-secondary px-3 py-2">
+                    <i class="fas fa-calendar-alt me-1 text-secondary"></i> Periode: <?= htmlspecialchars($periode_aktif['nama_periode']); ?>
+                </span>
+            </div>
+        </div>
+
         <?php if (isset($error_vote)): ?>
-            <div class="alert alert-danger shadow-sm"><i class="fas fa-exclamation-triangle me-2"></i> <?= $error_vote; ?></div>
+            <div class="alert alert-danger shadow-sm py-2"><i class="fas fa-exclamation-triangle me-2"></i> <?= $error_vote; ?></div>
         <?php endif; ?>
 
         <?php if (count($daftar_hak_pilih) == 0): ?>
-            <!-- Menampilkan layar ini jika tidak ada pemilihan yang sedang dibuka -->
-            <div class="bg-white p-5 rounded-4 shadow-sm text-center">
-                <i class="fas fa-calendar-times text-warning" style="font-size: 5rem; margin-bottom: 20px;"></i>
-                <h3 class="fw-bold text-dark">Belum Ada Pemilihan</h3>
-                <p class="text-muted fs-5">Saat ini belum ada jadwal pemilihan yang dibuka oleh panitia untuk Anda.</p>
+            <div class="bg-white p-5 rounded-4 shadow-sm text-center mt-4">
+                <i class="fas fa-calendar-times text-warning" style="font-size: 4rem; margin-bottom: 15px;"></i>
+                <h4 class="fw-bold text-dark">Belum Ada Pemilihan</h4>
+                <p class="text-muted">Saat ini belum ada jadwal pemilihan yang dibuka oleh panitia untuk Anda.</p>
             </div>
         <?php else: ?>
             
@@ -197,11 +215,10 @@ if (isset($_POST['submit_vote'])) {
             <form method="POST" action="" id="formVoting">
                 
                 <?php foreach ($daftar_hak_pilih as $eskul): ?>
-                    <!-- WIZARD STEP -->
-                    <div id="step-<?= $index; ?>" class="wizard-step bg-white p-4 rounded-4 shadow-sm mb-5 <?= $index === 0 ? 'd-block' : 'd-none'; ?>">
+                    <div id="step-<?= $index; ?>" class="wizard-step bg-white rounded-4 shadow-sm <?= $index === 0 ? 'd-block' : 'd-none'; ?>">
                         
                         <div class="d-flex justify-content-between align-items-center mb-4">
-                            <h4 class="section-title m-0">Pemilihan: <?= htmlspecialchars($eskul['nama_eskul']); ?></h4>
+                            <h5 class="section-title m-0">Pemilihan: <?= htmlspecialchars($eskul['nama_eskul']); ?></h5>
                             <span class="badge bg-primary fs-6">Tahap <?= $index + 1; ?> dari <?= $total_pemilihan; ?></span>
                         </div>
                         
@@ -212,9 +229,9 @@ if (isset($_POST['submit_vote'])) {
                         ?>
 
                         <?php if (count($kandidat) == 0): ?>
-                            <div class="alert alert-warning">Belum ada kandidat yang didaftarkan untuk pemilihan ini. Hubungi panitia.</div>
+                            <div class="alert alert-warning py-2">Belum ada kandidat terdaftar. Hubungi panitia.</div>
                         <?php else: ?>
-                            <div class="row g-4">
+                            <div class="row g-4 justify-content-center">
                                 <?php foreach ($kandidat as $kan): ?>
                                     <div class="col-md-4 col-sm-6">
                                         <label class="w-100 h-100 d-block m-0" style="cursor: pointer;">
@@ -222,34 +239,35 @@ if (isset($_POST['submit_vote'])) {
                                             
                                             <div class="card card-kandidat position-relative">
                                                 <div class="no-urut"><?= $kan['no_urut']; ?></div>
+                                                <!-- FOTO KANDIDAT YANG SUDAH DIPERBAIKI -->
                                                 <img src="../uploads/<?= htmlspecialchars($kan['foto']); ?>" class="foto-kandidat" alt="Foto Kandidat">
+                                                
                                                 <div class="card-body text-center">
-                                                    <h5 class="card-title fw-bold text-primary mb-1"><?= htmlspecialchars($kan['nama_paslon']); ?></h5>
-                                                    <p class="text-muted small mb-2"><i class="fas fa-graduation-cap me-1"></i> Kelas: <?= htmlspecialchars($kan['kelas_paslon']); ?></p>
+                                                    <h6 class="card-title fw-bold text-primary"><?= htmlspecialchars($kan['nama_paslon']); ?></h6>
+                                                    <p class="text-muted small mb-3"><i class="fas fa-graduation-cap me-1"></i> Kelas: <?= htmlspecialchars($kan['kelas_paslon']); ?></p>
                                                     
-                                                    <button type="button" class="btn btn-sm btn-outline-info w-100 mb-3" data-bs-toggle="modal" data-bs-target="#modalVisi<?= $kan['id_kandidat']; ?>" onclick="event.preventDefault(); event.stopPropagation();">
+                                                    <button type="button" class="btn btn-sm btn-outline-info w-100 mb-2 py-1" data-bs-toggle="modal" data-bs-target="#modalVisi<?= $kan['id_kandidat']; ?>" onclick="event.preventDefault(); event.stopPropagation();">
                                                         Lihat Visi & Misi
                                                     </button>
                                                     
-                                                    <div class="btn-pilih-ui btn btn-secondary w-100 fw-bold">PILIH KANDIDAT INI</div>
+                                                    <div class="btn-pilih-ui btn btn-secondary w-100 fw-bold">PILIH KANDIDAT</div>
                                                 </div>
                                             </div>
                                         </label>
                                     </div>
 
-                                    <!-- MODAL VISI MISI -->
                                     <div class="modal fade" id="modalVisi<?= $kan['id_kandidat']; ?>" tabindex="-1">
                                         <div class="modal-dialog modal-dialog-centered">
                                             <div class="modal-content">
-                                                <div class="modal-header bg-info text-white">
-                                                    <h5 class="modal-title fw-bold">Visi & Misi Paslon No. <?= $kan['no_urut']; ?></h5>
+                                                <div class="modal-header bg-info text-white py-2">
+                                                    <h6 class="modal-title fw-bold m-0">Visi & Misi Paslon No. <?= $kan['no_urut']; ?></h6>
                                                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                                 </div>
                                                 <div class="modal-body" style="white-space: pre-wrap; font-size: 0.95rem;">
 <?= htmlspecialchars($kan['visi_misi']); ?>
                                                 </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                                                <div class="modal-footer py-1">
+                                                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Tutup</button>
                                                 </div>
                                             </div>
                                         </div>
@@ -258,12 +276,11 @@ if (isset($_POST['submit_vote'])) {
                             </div>
                         <?php endif; ?>
 
-                        <!-- AREA TOMBOL NAVIGASI SLIDER -->
-                        <div class="d-flex justify-content-between align-items-center mt-5 border-top pt-4">
+                        <div class="d-flex justify-content-between align-items-center mt-4 border-top pt-4">
                             <div>
                                 <?php if ($index > 0): ?>
                                     <button type="button" class="btn btn-outline-secondary px-4 fw-bold rounded-pill" onclick="prevStep(<?= $index; ?>)">
-                                        <i class="fas fa-arrow-left me-2"></i> Sebelumnya
+                                        <i class="fas fa-arrow-left me-1"></i> Kembali
                                     </button>
                                 <?php endif; ?>
                             </div>
@@ -271,11 +288,11 @@ if (isset($_POST['submit_vote'])) {
                             <div>
                                 <?php if ($index < $total_pemilihan - 1): ?>
                                     <button type="button" class="btn btn-outline-primary px-4 fw-bold rounded-pill" onclick="nextStep(<?= $index; ?>)">
-                                        Selanjutnya <i class="fas fa-arrow-right ms-2"></i>
+                                        Lanjut <i class="fas fa-arrow-right ms-1"></i>
                                     </button>
                                 <?php else: ?>
                                     <button type="submit" name="submit_vote" class="btn btn-success px-4 fw-bold rounded-pill" id="btnSubmitVote" onclick="return validateFinalStep(<?= $index; ?>)">
-                                        <i class="fas fa-paper-plane me-2"></i> KIRIM SUARA SAYA
+                                        <i class="fas fa-paper-plane me-1"></i> KIRIM SUARA
                                     </button>
                                 <?php endif; ?>
                             </div>
@@ -291,12 +308,10 @@ if (isset($_POST['submit_vote'])) {
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Efek visual saat kartu dipilih & Logika Auto-Next
         document.querySelectorAll('.radio-hidden').forEach(radio => {
             radio.addEventListener('change', function() {
                 const name = this.getAttribute('name');
                 
-                // 1. Menghapus styling dari kandidat lain di kategori yang sama
                 document.querySelectorAll(`input[name="${name}"]`).forEach(r => {
                     const card = r.closest('label').querySelector('.card-kandidat');
                     if(card) {
@@ -304,13 +319,12 @@ if (isset($_POST['submit_vote'])) {
                         const btnUI = card.querySelector('.btn-pilih-ui');
                         if(btnUI) {
                             btnUI.classList.replace('btn-success', 'btn-secondary');
-                            btnUI.innerHTML = 'PILIH KANDIDAT INI';
+                            btnUI.innerHTML = 'PILIH KANDIDAT';
                         }
                     }
                 });
                 
                 if(this.checked) {
-                    // 2. Menerapkan styling hijau dan pop-out ke kandidat yang dipilih
                     const selectedCard = this.closest('label').querySelector('.card-kandidat');
                     if(selectedCard) {
                         selectedCard.classList.add('selected');
@@ -321,7 +335,6 @@ if (isset($_POST['submit_vote'])) {
                         }
                     }
 
-                    // 3. LOGIKA AUTO-NEXT (Otomatis bergeser ke step berikutnya)
                     const currentStepDiv = this.closest('.wizard-step');
                     const currentIndex = parseInt(currentStepDiv.id.split('-')[1]);
                     const totalSteps = document.querySelectorAll('.wizard-step').length;
@@ -329,19 +342,18 @@ if (isset($_POST['submit_vote'])) {
                     if (currentIndex < totalSteps - 1) {
                         setTimeout(() => {
                             nextStep(currentIndex);
-                        }, 800); 
+                        }, 700); 
                     }
                 }
             });
         });
 
-        // FUNGSI NAVIGASI WIZARD
         function nextStep(currentIndex) {
             const currentDiv = document.getElementById('step-' + currentIndex);
             const isChecked = currentDiv.querySelector('input[type="radio"]:checked');
             
             if (!isChecked) {
-                alert("Peringatan: Anda belum menentukan pilihan. Silakan klik salah satu kartu kandidat terlebih dahulu!");
+                alert("Pilih salah satu kandidat terlebih dahulu!");
                 return;
             }
 
@@ -364,14 +376,14 @@ if (isset($_POST['submit_vote'])) {
             const isChecked = currentDiv.querySelector('input[type="radio"]:checked');
             
             if (!isChecked) {
-                alert("Peringatan: Anda belum menentukan pilihan terakhir. Silakan klik kartu kandidat!");
+                alert("Anda belum menentukan pilihan terakhir!");
                 return false; 
             }
 
-            const konfirmasi = confirm("Apakah Anda yakin dengan semua pilihan Anda? Suara yang masuk tidak dapat dibatalkan.");
+            const konfirmasi = confirm("Yakin dengan pilihan Anda? Suara tidak dapat dibatalkan.");
             if(konfirmasi) {
                 const btn = document.getElementById('btnSubmitVote');
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Memproses...';
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Memproses...';
                 btn.classList.add('disabled');
                 return true;
             }
