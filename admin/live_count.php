@@ -145,7 +145,7 @@ $id_eskul_pilih = isset($_GET['id_eskul']) ? $_GET['id_eskul'] : (count($daftar_
                             htmlGrafik += `
                                 <div class="row align-items-center mb-4">
                                     <div class="col-md-1 col-3 text-center">
-                                        <img src="../uploads/${paslon.foto}" alt="Foto" class="foto-kandidat" onerror="this.src='../uploads/default.png'">
+                                        <img src="../uploads/${paslon.foto}" alt="Foto" class="foto-kandidat" onerror="this.onerror=null; this.src='https://via.placeholder.com/150?text=No+Image';">
                                     </div>
                                     <div class="col-md-11 col-9">
                                         <div class="d-flex justify-content-between mb-1">
