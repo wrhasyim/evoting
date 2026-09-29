@@ -249,7 +249,7 @@ if (isset($_POST['submit_vote_hidden'])) {
                                             
                                             <div class="card card-kandidat position-relative">
                                                 <div class="no-urut"><?= $kan['no_urut']; ?></div>
-                                                <img src="../uploads/<?= htmlspecialchars($kan['foto']); ?>" class="foto-kandidat" alt="Foto Kandidat">
+                                                <img src="../uploads/<?= htmlspecialchars($kan['foto']); ?>" class="foto-kandidat" alt="Foto Kandidat" onerror="this.onerror=null; this.src='https://via.placeholder.com/150?text=No+Image';">
                                                 
                                                 <div class="card-body text-center">
                                                     <h6 class="card-title fw-bold text-primary"><?= htmlspecialchars($kan['nama_paslon']); ?></h6>
