@@ -180,5 +180,6 @@ $id_eskul_pilih = isset($_GET['id_eskul']) ? $_GET['id_eskul'] : (count($daftar_
     
     <!-- Script Bootstrap Wajib untuk fungsionalitas Dropdown menu Profil -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<?php include 'footer.php'; ?>
 </body>
 </html>

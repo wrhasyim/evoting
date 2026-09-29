@@ -16,6 +16,7 @@ $pesan_notifikasi = '';
 // FITUR: DOWNLOAD SAMPLE FORMAT CSV 
 // ==========================================
 if (isset($_POST['download_sample'])) {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename=format_import_anggota_eskul.csv');
     
@@ -36,6 +37,7 @@ if (isset($_POST['download_sample'])) {
 // FITUR: IMPORT DATA CSV (AUTO-DETECT & MATCHING KELAS)
 // ==========================================
 if (isset($_POST['import_csv'])) {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
     if (isset($_FILES['file_csv']) && $_FILES['file_csv']['error'] == 0) {
         $file_tmp = $_FILES['file_csv']['tmp_name'];
         $handle = fopen($file_tmp, "r");
@@ -129,7 +131,22 @@ if (isset($_POST['import_csv'])) {
             </div>
         ";
     } else {
-        $pesan_notifikasi = "<div class='alert alert-danger'><i class='fas fa-exclamation-triangle me-2'></i>Harap pilih file CSV yang valid!</div>";
+        $pesan_notifikasi = "<script>var notification_type='error'; var notification_title='Informasi'; var notification_message='Harap pilih file CSV yang valid!';</script>";
+    }
+}
+
+// ==========================================
+// FITUR: HAPUS ANGGOTA ESKUL
+// ==========================================
+if (isset($_POST['hapus_anggota'])) {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
+
+    $id_anggota = $_POST['id_anggota'];
+    $stmt = $pdo->prepare("DELETE FROM anggota_eskul WHERE id_anggota = ?");
+    if ($stmt->execute([$id_anggota])) {
+        $pesan_notifikasi = "<script>var notification_type='success'; var notification_title='Berhasil'; var notification_message='Anggota ekstrakurikuler berhasil dihapus.';</script>";
+    } else {
+        $pesan_notifikasi = "<script>var notification_type='error'; var notification_title='Gagal'; var notification_message='Terjadi kesalahan saat menghapus data.';</script>";
     }
 }
 
@@ -197,7 +214,8 @@ $data_anggota = $stmt_data->fetchAll();
                             <th width="15%">NIS</th>
                             <th width="30%">Nama Siswa</th>
                             <th width="15%">Kelas</th>
-                            <th width="35%">Tergabung di Eskul</th>
+                            <th width="25%">Tergabung di Eskul</th>
+                            <th width="10%">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -209,6 +227,15 @@ $data_anggota = $stmt_data->fetchAll();
                                     <td class="fw-medium"><?= htmlspecialchars($row['nama_siswa']); ?></td>
                                     <td><span class="badge bg-secondary"><?= htmlspecialchars($row['kelas']); ?></span></td>
                                     <td><span class="badge bg-info text-dark px-3 py-2 border"><i class="fas fa-users me-1"></i> <?= htmlspecialchars($row['nama_eskul']); ?></span></td>
+                                    <td>
+                                        <form method="POST" action="" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
+                                            <input type="hidden" name="id_anggota" value="<?= $row['id_anggota']; ?>">
+                                            <button type="submit" name="hapus_anggota" class="btn btn-sm btn-danger" onclick="return confirm('Yakin ingin menghapus anggota ini?');" title="Hapus">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </form>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>
@@ -234,6 +261,7 @@ $data_anggota = $stmt_data->fetchAll();
 
                     <!-- Tombol Download Sample -->
                     <form method="POST" action="" class="mb-4 text-center">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                         <button type="submit" name="download_sample" class="btn btn-outline-dark btn-sm rounded-pill px-4 fw-bold">
                             <i class="fas fa-download me-1"></i> Download Template CSV
                         </button>
@@ -243,6 +271,7 @@ $data_anggota = $stmt_data->fetchAll();
 
                     <!-- Form Upload CSV -->
                     <form method="POST" action="" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                         <div class="mb-4 mt-3">
                             <label class="form-label fw-bold">Pilih File CSV Anda</label>
                             <input type="file" name="file_csv" class="form-control form-control-lg" accept=".csv" required>
@@ -275,5 +304,6 @@ $data_anggota = $stmt_data->fetchAll();
             });
         });
     </script>
+<?php include 'footer.php'; ?>
 </body>
 </html>

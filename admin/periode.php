@@ -14,26 +14,29 @@ $pesan_notifikasi = '';
 
 // 1. PROSES TAMBAH PERIODE
 if (isset($_POST['tambah_periode'])) {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
     $nama_periode = trim($_POST['nama_periode']);
     
     // Secara default, periode baru tidak langsung aktif (status_aktif = 0)
     $stmt = $pdo->prepare("INSERT INTO periode (nama_periode, status_aktif) VALUES (:nama, 0)");
     $stmt->execute(['nama' => $nama_periode]);
-    $pesan_notifikasi = "<div class='alert alert-success'>Berhasil menambah periode <b>$nama_periode</b>. Silakan klik 'Aktifkan' untuk menggunakannya.</div>";
+    $pesan_notifikasi = "<script>var notification_type='success'; var notification_title='Informasi'; var notification_message='Berhasil menambah periode <b>$nama_periode</b>. Silakan klik \'Aktifkan\' untuk menggunakannya.';</script>";
 }
 
 // 2. PROSES EDIT PERIODE
 if (isset($_POST['edit_periode'])) {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
     $id_periode = $_POST['id_periode'];
     $nama_periode = trim($_POST['nama_periode']);
     
     $stmt = $pdo->prepare("UPDATE periode SET nama_periode = :nama WHERE id_periode = :id");
     $stmt->execute(['nama' => $nama_periode, 'id' => $id_periode]);
-    $pesan_notifikasi = "<div class='alert alert-info'>Nama periode berhasil diperbarui.</div>";
+    $pesan_notifikasi = "<script>var notification_type='info'; var notification_title='Informasi'; var notification_message='Nama periode berhasil diperbarui.';</script>";
 }
 
 // 3. PROSES AKTIFKAN PERIODE (Logika Krusial)
 if (isset($_POST['aktifkan_periode'])) {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
     $id_periode = $_POST['id_periode'];
     
     // Langkah A: Matikan SEMUA periode terlebih dahulu
@@ -43,11 +46,12 @@ if (isset($_POST['aktifkan_periode'])) {
     $stmt = $pdo->prepare("UPDATE periode SET status_aktif = 1 WHERE id_periode = :id");
     $stmt->execute(['id' => $id_periode]);
     
-    $pesan_notifikasi = "<div class='alert alert-success'>Periode berhasil diaktifkan! Sistem e-voting kini berjalan pada periode ini.</div>";
+    $pesan_notifikasi = "<script>var notification_type='success'; var notification_title='Informasi'; var notification_message='Periode berhasil diaktifkan! Sistem e-voting kini berjalan pada periode ini.';</script>";
 }
 
 // 4. PROSES HAPUS PERIODE
 if (isset($_POST['hapus_periode'])) {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
     $id_periode = $_POST['id_periode'];
     
     // Cek apakah yang dihapus adalah periode aktif? Jika ya, tolak penghapusan untuk keamanan.
@@ -56,11 +60,11 @@ if (isset($_POST['hapus_periode'])) {
     $status = $cek_aktif->fetchColumn();
 
     if ($status == 1) {
-        $pesan_notifikasi = "<div class='alert alert-danger'>Gagal: Anda tidak boleh menghapus periode yang sedang AKTIF!</div>";
+        $pesan_notifikasi = "<script>var notification_type='error'; var notification_title='Informasi'; var notification_message='Gagal: Anda tidak boleh menghapus periode yang sedang AKTIF!';</script>";
     } else {
         $stmt = $pdo->prepare("DELETE FROM periode WHERE id_periode = :id");
         $stmt->execute(['id' => $id_periode]);
-        $pesan_notifikasi = "<div class='alert alert-warning'>Periode berhasil dihapus secara permanen.</div>";
+        $pesan_notifikasi = "<script>var notification_type='warning'; var notification_title='Informasi'; var notification_message='Periode berhasil dihapus secara permanen.';</script>";
     }
 }
 
@@ -76,6 +80,7 @@ $data_periode = $stmt_tampil->fetchAll();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manajemen Angkatan - E-Voting</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -146,6 +151,7 @@ $data_periode = $stmt_tampil->fetchAll();
                                         <!-- Tombol Aktifkan (Hanya muncul jika belum aktif) -->
                                         <?php if ($row['status_aktif'] == 0): ?>
                                             <form method="POST" action="" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                                                 <input type="hidden" name="id_periode" value="<?= $row['id_periode']; ?>">
                                                 <button type="submit" name="aktifkan_periode" class="btn btn-sm btn-success me-1" title="Jadikan Periode Aktif">
                                                     <i class="fas fa-power-off"></i> Aktifkan
@@ -170,6 +176,7 @@ $data_periode = $stmt_tampil->fetchAll();
                                     <div class="modal-dialog">
                                         <div class="modal-content">
                                             <form method="POST" action="">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                                                 <div class="modal-header">
                                                     <h5 class="modal-title">Edit Nama Periode</h5>
                                                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -195,6 +202,7 @@ $data_periode = $stmt_tampil->fetchAll();
                                     <div class="modal-dialog">
                                         <div class="modal-content">
                                             <form method="POST" action="">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                                                 <div class="modal-header bg-danger text-white">
                                                     <h5 class="modal-title">Konfirmasi Penghapusan</h5>
                                                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -229,6 +237,7 @@ $data_periode = $stmt_tampil->fetchAll();
         <div class="modal-dialog">
             <div class="modal-content">
                 <form method="POST" action="">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                     <div class="modal-header">
                         <h5 class="modal-title fw-bold">Tambah Periode Baru</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -249,5 +258,23 @@ $data_periode = $stmt_tampil->fetchAll();
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- SCRIPT WAJIB DATATABLES -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('table.table').DataTable({
+                "language": {
+                    "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json"
+                },
+                "pageLength": 10,
+                "ordering": true
+            });
+        });
+    </script>
+
+<?php include 'footer.php'; ?>
 </body>
 </html>

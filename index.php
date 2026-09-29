@@ -31,6 +31,8 @@ $error_pesan = '';
 
 // 4. Logika Smart Login (Berjalan saat tombol masuk ditekan)
 if (isset($_POST['login'])) {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
+
     $userid = trim($_POST['userid']);
     $credential = $_POST['credential'];
 
@@ -41,6 +43,7 @@ if (isset($_POST['login'])) {
 
     if ($admin_data && password_verify($credential, $admin_data['password'])) {
         // Ini adalah Admin, set sesi admin
+        session_regenerate_id(true);
         $_SESSION['admin_logged_in'] = true;
         $_SESSION['id_admin'] = $admin_data['id_admin'];
         $_SESSION['nama_lengkap'] = $admin_data['nama_lengkap'];
@@ -65,6 +68,7 @@ if (isset($_POST['login'])) {
                 $error_pesan = "Akses Ditolak: Anda sudah memberikan suara.";
             } else {
                 // Ini adalah Siswa yang sah, set sesi siswa
+                session_regenerate_id(true);
                 $_SESSION['siswa_logged_in'] = true;
                 $_SESSION['nis'] = $siswa_data['nis'];
                 $_SESSION['nama_siswa'] = $siswa_data['nama_siswa'];
@@ -220,6 +224,7 @@ if (isset($_POST['login'])) {
                 <?php endif; ?>
 
                 <form method="POST" action="">
+                    <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                     <div class="mb-4">
                         <label class="form-label fw-semibold small text-dark">Username / NIS</label>
                         <div class="input-group mb-3 shadow-sm">

@@ -19,6 +19,7 @@ $id_admin = $_SESSION['id_admin'];
 
 // EXPORT DATABASE
 if (isset($_POST['export_db'])) {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
     $tables = [];
     $stmt = $pdo->query("SHOW TABLES");
     while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
@@ -65,23 +66,47 @@ if (isset($_POST['export_db'])) {
 
 // IMPORT DATABASE
 if (isset($_POST['import_db'])) {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
     if (isset($_FILES['file_sql']) && $_FILES['file_sql']['error'] == 0) {
         $file_tmp = $_FILES['file_sql']['tmp_name'];
         $sql_contents = file_get_contents($file_tmp);
         
-        try {
-            $pdo->exec($sql_contents);
-            $pesan_notifikasi = "<div class='alert alert-success'><i class='fas fa-check-circle me-2'></i>Database berhasil di-restore dari file cadangan!</div>";
-        } catch (PDOException $e) {
-            $pesan_notifikasi = "<div class='alert alert-danger'><i class='fas fa-exclamation-triangle me-2'></i>Gagal melakukan restore: " . $e->getMessage() . "</div>";
+        // 1. Ekstrak nama file untuk dicek
+        $nama_file = $_FILES['file_sql']['name'];
+        $ekstensi = strtolower(pathinfo($nama_file, PATHINFO_EXTENSION));
+
+        // 2. Proteksi Dasar SQL Injection
+        // Kita tolak file yang menggunakan sintaks berbahaya yang tidak berkaitan dengan Dump standard
+        $blacklist = ['drop database', 'delete from admin', 'outfile', 'load_file', 'grant all', 'shutdown'];
+        $aman = true;
+
+        foreach ($blacklist as $kata_terlarang) {
+            if (stripos($sql_contents, $kata_terlarang) !== false) {
+                $aman = false;
+                break;
+            }
+        }
+
+        if ($ekstensi === 'sql' && $aman) {
+            try {
+                // PDO::exec secara default tidak menjalankan multiquery jika tidak diaktifkan,
+                // Namun untuk SQL dump PDO::exec ini dapat dieksekusi.
+                $pdo->exec($sql_contents);
+                $pesan_notifikasi = "<script>var notification_type='success'; var notification_title='Informasi'; var notification_message='Database berhasil di-restore dari file cadangan!';</script>";
+            } catch (PDOException $e) {
+                $pesan_notifikasi = "<script>var notification_type='error'; var notification_title='Informasi'; var notification_message='Gagal melakukan restore: " . addslashes($e->getMessage()) . "';</script>";
+            }
+        } else {
+             $pesan_notifikasi = "<script>var notification_type='error'; var notification_title='Akses Ditolak'; var notification_message='File terindikasi mengandung query berbahaya atau bukan format SQL murni.';</script>";
         }
     } else {
-        $pesan_notifikasi = "<div class='alert alert-danger'>Pilih file .sql yang valid terlebih dahulu.</div>";
+        $pesan_notifikasi = "<script>var notification_type='error'; var notification_title='Informasi'; var notification_message='Pilih file .sql yang valid terlebih dahulu.';</script>";
     }
 }
 
 // RESET TOTAL SISTEM
 if (isset($_POST['reset_total'])) {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
     try {
         $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
         $tabel_direset = ['suara_masuk', 'riwayat_pilih', 'kandidat', 'anggota_eskul', 'siswa', 'eskul', 'periode'];
@@ -90,15 +115,16 @@ if (isset($_POST['reset_total'])) {
             $pdo->exec("ALTER TABLE $tabel AUTO_INCREMENT = 1;");
         }
         $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
-        $pesan_notifikasi = "<div class='alert alert-success fw-bold'><i class='fas fa-check-circle me-2'></i>Sistem berhasil di-reset total! Semua data telah dikosongkan dengan bersih.</div>";
+        $pesan_notifikasi = "<script>var notification_type='success'; var notification_title='Informasi'; var notification_message='Sistem berhasil di-reset total! Semua data telah dikosongkan dengan bersih.';</script>";
     } catch (PDOException $e) {
         $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
-        $pesan_notifikasi = "<div class='alert alert-danger'><i class='fas fa-exclamation-triangle me-2'></i>Gagal mereset sistem: " . $e->getMessage() . "</div>";
+        $pesan_notifikasi = "<script>var notification_type='error'; var notification_title='Informasi'; var notification_message='Gagal mereset sistem: " . $e->getMessage() . "';</script>";
     }
 }
 
 // UNGGAH VISUAL (LOGO SAJA)
 if (isset($_POST['upload_visual'])) {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
     $direktori_simpan = '../uploads/';
     if (!file_exists($direktori_simpan)) { mkdir($direktori_simpan, 0777, true); }
     $ekstensi_valid = ['png', 'jpg', 'jpeg'];
@@ -123,6 +149,7 @@ if (isset($_POST['upload_visual'])) {
 
 // PEMBARUAN PROFIL & PASSWORD
 if (isset($_POST['simpan_pengaturan'])) {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
     $nama_baru = trim($_POST['nama_lengkap']);
     $username_baru = trim($_POST['username']);
     $password_lama = $_POST['password_lama'];
@@ -161,6 +188,7 @@ if (isset($_POST['simpan_pengaturan'])) {
 
 // RESET DATA SUARA SAJA
 if (isset($_POST['eksekusi_reset_suara'])) {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
     $konfirmasi = trim($_POST['konfirmasi_teks_suara']);
     if ($konfirmasi === 'RESET') {
         try {
@@ -181,6 +209,7 @@ if (isset($_POST['eksekusi_reset_suara'])) {
 
 // HAPUS FOTO KANDIDAT
 if (isset($_POST['eksekusi_hapus_foto'])) {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
     $konfirmasi_foto = trim($_POST['konfirmasi_foto']);
     if ($konfirmasi_foto === 'HAPUS FOTO') {
         $folder_uploads = '../uploads/';
@@ -251,6 +280,7 @@ $data_admin = $stmt->fetch();
             <div class="col-lg-6">
                 <div class="form-container border-top border-primary border-5 bg-white">
                     <form method="POST" action="">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                         <h5 class="fw-bold mb-4 border-bottom pb-2 text-primary"><i class="fas fa-user-shield me-2"></i> Keamanan Akun</h5>
                         <div class="mb-3">
                             <label class="form-label fw-medium">Nama Lengkap</label>
@@ -283,6 +313,7 @@ $data_admin = $stmt->fetch();
                 <!-- Visual (Hanya Logo) -->
                 <div class="form-container border-top border-info border-5 mb-4 bg-white" style="height: auto;">
                     <form method="POST" action="" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                         <h5 class="fw-bold mb-3 border-bottom pb-2 text-info"><i class="fas fa-paint-brush me-2"></i> Kustomisasi Visual</h5>
                         <!-- Input untuk Banner telah dihapus -->
                         <div class="mb-3">
@@ -297,9 +328,11 @@ $data_admin = $stmt->fetch();
                 <div class="form-container border-top border-success border-5 bg-white" style="height: auto;">
                     <h5 class="fw-bold mb-3 border-bottom pb-2 text-success"><i class="fas fa-database me-2"></i> Manajemen Database</h5>
                     <form method="POST" action="" class="mb-3">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                         <button type="submit" name="export_db" class="btn btn-success w-100 fw-bold"><i class="fas fa-download me-2"></i> Download Backup (.sql)</button>
                     </form>
                     <form method="POST" action="" enctype="multipart/form-data" class="bg-light p-2 border rounded">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                         <input type="file" name="file_sql" class="form-control form-control-sm mb-2" accept=".sql" required>
                         <button type="submit" name="import_db" class="btn btn-outline-dark btn-sm w-100 fw-bold" onclick="return confirm('Semua data saat ini akan terganti. Anda yakin?');">Mulai Restore</button>
                     </form>
@@ -318,6 +351,7 @@ $data_admin = $stmt->fetch();
                     <h6 class="fw-bold text-warning">Reset Kotak Suara</h6>
                     <p class="small text-muted mb-3">Menghapus perolehan suara saja. Ideal setelah simulasi.</p>
                     <form method="POST" action="">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                         <input type="text" name="konfirmasi_teks_suara" class="form-control form-control-sm text-center fw-bold border-warning mb-2" placeholder="Ketik RESET" required>
                         <button type="submit" name="eksekusi_reset_suara" class="btn btn-warning btn-sm w-100 fw-bold text-dark"><i class="fas fa-eraser me-1"></i> Kosongkan Suara</button>
                     </form>
@@ -331,6 +365,7 @@ $data_admin = $stmt->fetch();
                     <h6 class="fw-bold text-secondary">Bersihkan Foto</h6>
                     <p class="small text-muted mb-3">Menghapus file fisik foto kandidat lama (Logo/Banner tetap aman).</p>
                     <form method="POST" action="">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                         <input type="text" name="konfirmasi_foto" class="form-control form-control-sm text-center fw-bold border-secondary mb-2" placeholder="Ketik HAPUS FOTO" required>
                         <button type="submit" name="eksekusi_hapus_foto" class="btn btn-secondary btn-sm w-100 fw-bold"><i class="fas fa-broom me-1"></i> Bersihkan Storage</button>
                     </form>
@@ -344,6 +379,7 @@ $data_admin = $stmt->fetch();
                     <h6 class="fw-bold text-danger">Reset Total Sistem</h6>
                     <p class="small text-muted mb-3">Mengosongkan SEMUA data siswa, kandidat, dan suara.</p>
                     <form method="POST" action="">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                         <button type="submit" name="reset_total" class="btn btn-danger btn-sm w-100 fw-bold mt-4" onclick="return confirm('PERINGATAN KERAS! Semua data akan hilang permanen. Yakin?');"><i class="fas fa-trash-alt me-1"></i> RESET TOTAL</button>
                     </form>
                 </div>
@@ -354,5 +390,6 @@ $data_admin = $stmt->fetch();
 
     <!-- Script Bootstrap Wajib untuk fungsionalitas Dropdown menu Profil -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<?php include 'footer.php'; ?>
 </body>
 </html>

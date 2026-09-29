@@ -14,35 +14,39 @@ $pesan_notifikasi = '';
 
 // 1. PROSES TAMBAH ESKUL
 if (isset($_POST['tambah_eskul'])) {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
     $nama_eskul = trim($_POST['nama_eskul']);
     $aturan = $_POST['aturan_pemilih'];
     
     $stmt = $pdo->prepare("INSERT INTO eskul (nama_eskul, aturan_pemilih) VALUES (:nama, :aturan)");
     $stmt->execute(['nama' => $nama_eskul, 'aturan' => $aturan]);
-    $pesan_notifikasi = "<div class='alert alert-success'>Berhasil menambahkan ekstrakurikuler baru.</div>";
+    $pesan_notifikasi = "<script>var notification_type='success'; var notification_title='Informasi'; var notification_message='Berhasil menambahkan ekstrakurikuler baru.';</script>";
 }
 
 // 2. PROSES EDIT ESKUL
 if (isset($_POST['edit_eskul'])) {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
     $id_eskul = $_POST['id_eskul'];
     $nama_eskul = trim($_POST['nama_eskul']);
     $aturan = $_POST['aturan_pemilih'];
     
     $stmt = $pdo->prepare("UPDATE eskul SET nama_eskul = :nama, aturan_pemilih = :aturan WHERE id_eskul = :id");
     $stmt->execute(['nama' => $nama_eskul, 'aturan' => $aturan, 'id' => $id_eskul]);
-    $pesan_notifikasi = "<div class='alert alert-info'>Data ekstrakurikuler berhasil diperbarui.</div>";
+    $pesan_notifikasi = "<script>var notification_type='info'; var notification_title='Informasi'; var notification_message='Data ekstrakurikuler berhasil diperbarui.';</script>";
 }
 
 // 3. PROSES HAPUS ESKUL (SOFT DELETE)
 if (isset($_POST['hapus_eskul'])) {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
     $id_eskul = $_POST['id_eskul'];
     $stmt = $pdo->prepare("UPDATE eskul SET status_aktif = 0 WHERE id_eskul = :id");
     $stmt->execute(['id' => $id_eskul]);
-    $pesan_notifikasi = "<div class='alert alert-warning'>Ekstrakurikuler telah dipindahkan ke Tempat Sampah.</div>";
+    $pesan_notifikasi = "<script>var notification_type='warning'; var notification_title='Informasi'; var notification_message='Ekstrakurikuler telah dipindahkan ke Tempat Sampah.';</script>";
 }
 
 // 4. PROSES BUKA/TUTUP PEMILIHAN (FITUR BARU)
 if (isset($_POST['toggle_pemilihan'])) {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
     $id_eskul = $_POST['id_eskul'];
     $status_baru = $_POST['status_baru']; // 1 untuk Buka, 0 untuk Tutup
     
@@ -50,9 +54,9 @@ if (isset($_POST['toggle_pemilihan'])) {
     $stmt->execute(['status' => $status_baru, 'id' => $id_eskul]);
     
     if ($status_baru == 1) {
-        $pesan_notifikasi = "<div class='alert alert-success'><i class='fas fa-unlock me-2'></i>Pemilihan untuk eskul ini resmi <b>DIBUKA</b>. Siswa kini bisa melihatnya.</div>";
+        $pesan_notifikasi = "<script>var notification_type='success'; var notification_title='Informasi'; var notification_message='Pemilihan untuk eskul ini resmi <b>DIBUKA</b>. Siswa kini bisa melihatnya.';</script>";
     } else {
-        $pesan_notifikasi = "<div class='alert alert-secondary'><i class='fas fa-lock me-2'></i>Pemilihan untuk eskul ini telah <b>DITUTUP</b>.</div>";
+        $pesan_notifikasi = "<script>var notification_type='success'; var notification_title='Informasi'; var notification_message='Pemilihan untuk eskul ini telah <b>DITUTUP</b>.';</script>";
     }
 }
 
@@ -68,6 +72,7 @@ $data_eskul = $stmt_tampil->fetchAll();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manajemen Eskul - E-Voting</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -135,6 +140,7 @@ $data_eskul = $stmt_tampil->fetchAll();
                                     <td class="text-center">
                                         <!-- Tombol Kontrol Buka/Tutup -->
                                         <form method="POST" action="" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                                             <input type="hidden" name="id_eskul" value="<?= $row['id_eskul']; ?>">
                                             <?php if (isset($row['status_pemilihan']) && $row['status_pemilihan'] == 1): ?>
                                                 <input type="hidden" name="status_baru" value="0">
@@ -165,6 +171,7 @@ $data_eskul = $stmt_tampil->fetchAll();
                                     <div class="modal-dialog">
                                         <div class="modal-content">
                                             <form method="POST" action="">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                                                 <div class="modal-header">
                                                     <h5 class="modal-title">Edit Data Ekstrakurikuler</h5>
                                                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -197,6 +204,7 @@ $data_eskul = $stmt_tampil->fetchAll();
                                     <div class="modal-dialog">
                                         <div class="modal-content">
                                             <form method="POST" action="">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                                                 <div class="modal-header bg-danger text-white">
                                                     <h5 class="modal-title">Konfirmasi Penghapusan</h5>
                                                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -230,6 +238,7 @@ $data_eskul = $stmt_tampil->fetchAll();
         <div class="modal-dialog">
             <div class="modal-content">
                 <form method="POST" action="">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                     <div class="modal-header">
                         <h5 class="modal-title fw-bold">Tambah Ekstrakurikuler</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -257,5 +266,23 @@ $data_eskul = $stmt_tampil->fetchAll();
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- SCRIPT WAJIB DATATABLES -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('table.table').DataTable({
+                "language": {
+                    "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json"
+                },
+                "pageLength": 10,
+                "ordering": true
+            });
+        });
+    </script>
+
+<?php include 'footer.php'; ?>
 </body>
 </html>

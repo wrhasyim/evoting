@@ -24,6 +24,7 @@ $id_eskul_pilih = isset($_GET['id_eskul']) ? $_GET['id_eskul'] : (count($daftar_
 
 // 4. PROSES TAMBAH KANDIDAT
 if (isset($_POST['tambah_kandidat']) && $id_eskul_pilih) {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
     $no_urut = $_POST['no_urut'];
     $nama_paslon = trim($_POST['nama_paslon']);
     $kelas_paslon = trim($_POST['kelas_paslon']);
@@ -41,17 +42,18 @@ if (isset($_POST['tambah_kandidat']) && $id_eskul_pilih) {
         if (move_uploaded_file($tmp_file, '../uploads/' . $nama_file_baru)) {
             $stmt = $pdo->prepare("INSERT INTO kandidat (id_eskul, no_urut, nama_paslon, kelas_paslon, visi_misi, foto) VALUES (?, ?, ?, ?, ?, ?)");
             $stmt->execute([$id_eskul_pilih, $no_urut, $nama_paslon, $kelas_paslon, $visi_misi, $nama_file_baru]);
-            $pesan_notifikasi = "<div class='alert alert-success'>Kandidat berhasil ditambahkan!</div>";
+            $pesan_notifikasi = "<script>var notification_type='success'; var notification_title='Informasi'; var notification_message='Kandidat berhasil ditambahkan!';</script>";
         } else {
-            $pesan_notifikasi = "<div class='alert alert-danger'>Gagal mengunggah foto.</div>";
+            $pesan_notifikasi = "<script>var notification_type='error'; var notification_title='Informasi'; var notification_message='Gagal mengunggah foto.';</script>";
         }
     } else {
-        $pesan_notifikasi = "<div class='alert alert-danger'>Format foto tidak valid atau ukuran lebih dari 2MB.</div>";
+        $pesan_notifikasi = "<script>var notification_type='error'; var notification_title='Informasi'; var notification_message='Format foto tidak valid atau ukuran lebih dari 2MB.';</script>";
     }
 }
 
 // 5. PROSES EDIT KANDIDAT (FITUR BARU)
 if (isset($_POST['edit_kandidat'])) {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
     $id_kandidat = $_POST['id_kandidat'];
     $no_urut = $_POST['no_urut'];
     $nama_paslon = trim($_POST['nama_paslon']);
@@ -82,15 +84,16 @@ if (isset($_POST['edit_kandidat'])) {
 
     $stmt = $pdo->prepare("UPDATE kandidat SET no_urut=?, nama_paslon=?, kelas_paslon=?, visi_misi=?, foto=? WHERE id_kandidat=?");
     $stmt->execute([$no_urut, $nama_paslon, $kelas_paslon, $visi_misi, $nama_file_baru, $id_kandidat]);
-    $pesan_notifikasi = "<div class='alert alert-success'>Data kandidat berhasil diperbarui!</div>";
+    $pesan_notifikasi = "<script>var notification_type='success'; var notification_title='Informasi'; var notification_message='Data kandidat berhasil diperbarui!';</script>";
 }
 
 // 6. PROSES HAPUS KANDIDAT
 if (isset($_POST['hapus_kandidat'])) {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
     $id_kandidat = $_POST['id_kandidat'];
     $stmt = $pdo->prepare("UPDATE kandidat SET status_aktif = 0 WHERE id_kandidat = ?");
     $stmt->execute([$id_kandidat]);
-    $pesan_notifikasi = "<div class='alert alert-warning'>Kandidat telah dihapus.</div>";
+    $pesan_notifikasi = "<script>var notification_type='warning'; var notification_title='Informasi'; var notification_message='Kandidat telah dihapus.';</script>";
 }
 
 // AMBIL DATA KANDIDAT
@@ -109,6 +112,7 @@ if ($id_eskul_pilih) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kandidat - E-Voting</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -213,6 +217,7 @@ if ($id_eskul_pilih) {
                                         <div class="modal-dialog modal-lg">
                                             <div class="modal-content">
                                                 <form method="POST" action="" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                                                     <div class="modal-header">
                                                         <h5 class="modal-title fw-bold">Edit Data Kandidat</h5>
                                                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -259,6 +264,7 @@ if ($id_eskul_pilih) {
                                         <div class="modal-dialog">
                                             <div class="modal-content">
                                                 <form method="POST" action="">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                                                     <div class="modal-header bg-danger text-white">
                                                         <h5 class="modal-title">Konfirmasi Penghapusan</h5>
                                                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -291,6 +297,7 @@ if ($id_eskul_pilih) {
                 <div class="modal-dialog modal-lg">
                     <div class="modal-content">
                         <form method="POST" action="" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                             <div class="modal-header">
                                 <h5 class="modal-title fw-bold">Tambah Kandidat Baru</h5>
                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -332,5 +339,23 @@ if ($id_eskul_pilih) {
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- SCRIPT WAJIB DATATABLES -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('table.table').DataTable({
+                "language": {
+                    "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json"
+                },
+                "pageLength": 10,
+                "ordering": true
+            });
+        });
+    </script>
+
+<?php include 'footer.php'; ?>
 </body>
 </html>
