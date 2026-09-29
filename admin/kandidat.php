@@ -34,20 +34,28 @@ if (isset($_POST['tambah_kandidat']) && $id_eskul_pilih) {
     $ukuran_file = $_FILES['foto']['size'];
     $tmp_file = $_FILES['foto']['tmp_name'];
     
-    $ekstensi_valid = ['jpg', 'jpeg', 'png'];
-    $ekstensi_gambar = strtolower(pathinfo($nama_file, PATHINFO_EXTENSION));
-    $nama_file_baru = uniqid() . '.' . $ekstensi_gambar;
-
-    if (in_array($ekstensi_gambar, $ekstensi_valid) && $ukuran_file <= 2097152) {
-        if (move_uploaded_file($tmp_file, '../uploads/' . $nama_file_baru)) {
-            $stmt = $pdo->prepare("INSERT INTO kandidat (id_eskul, no_urut, nama_paslon, kelas_paslon, visi_misi, foto) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$id_eskul_pilih, $no_urut, $nama_paslon, $kelas_paslon, $visi_misi, $nama_file_baru]);
-            $pesan_notifikasi = "<script>var notification_type='success'; var notification_title='Informasi'; var notification_message='Kandidat berhasil ditambahkan!';</script>";
-        } else {
-            $pesan_notifikasi = "<script>var notification_type='error'; var notification_title='Informasi'; var notification_message='Gagal mengunggah foto.';</script>";
-        }
+    if (empty($nama_file)) {
+        // Use empty string, handled by fallback URL on render
+        $nama_file_baru = '';
+        $stmt = $pdo->prepare("INSERT INTO kandidat (id_eskul, no_urut, nama_paslon, kelas_paslon, visi_misi, foto) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$id_eskul_pilih, $no_urut, $nama_paslon, $kelas_paslon, $visi_misi, $nama_file_baru]);
+        $pesan_notifikasi = "<script>var notification_type='success'; var notification_title='Informasi'; var notification_message='Kandidat berhasil ditambahkan (Tanpa Foto).';</script>";
     } else {
-        $pesan_notifikasi = "<script>var notification_type='error'; var notification_title='Informasi'; var notification_message='Format foto tidak valid atau ukuran lebih dari 2MB.';</script>";
+        $ekstensi_valid = ['jpg', 'jpeg', 'png'];
+        $ekstensi_gambar = strtolower(pathinfo($nama_file, PATHINFO_EXTENSION));
+        $nama_file_baru = uniqid() . '.' . $ekstensi_gambar;
+
+        if (in_array($ekstensi_gambar, $ekstensi_valid) && $ukuran_file <= 2097152) {
+            if (move_uploaded_file($tmp_file, '../uploads/' . $nama_file_baru)) {
+                $stmt = $pdo->prepare("INSERT INTO kandidat (id_eskul, no_urut, nama_paslon, kelas_paslon, visi_misi, foto) VALUES (?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$id_eskul_pilih, $no_urut, $nama_paslon, $kelas_paslon, $visi_misi, $nama_file_baru]);
+                $pesan_notifikasi = "<script>var notification_type='success'; var notification_title='Informasi'; var notification_message='Kandidat berhasil ditambahkan!';</script>";
+            } else {
+                $pesan_notifikasi = "<script>var notification_type='error'; var notification_title='Informasi'; var notification_message='Gagal mengunggah foto.';</script>";
+            }
+        } else {
+            $pesan_notifikasi = "<script>var notification_type='error'; var notification_title='Informasi'; var notification_message='Format foto tidak valid atau ukuran lebih dari 2MB.';</script>";
+        }
     }
 }
 

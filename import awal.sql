@@ -46,6 +46,8 @@ CREATE TABLE `eskul` (
   `nama_eskul` varchar(100) NOT NULL,
   `aturan_pemilih` enum('semua_siswa','hanya_anggota') DEFAULT 'semua_siswa',
   `status_pemilihan` tinyint(1) DEFAULT 0,
+  `waktu_mulai` datetime DEFAULT NULL,
+  `waktu_selesai` datetime DEFAULT NULL,
   `status_aktif` tinyint(1) DEFAULT 1,
   PRIMARY KEY (`id_eskul`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

@@ -17,9 +17,11 @@ if (isset($_POST['tambah_eskul'])) {
     verify_csrf_token($_POST['csrf_token'] ?? '');
     $nama_eskul = trim($_POST['nama_eskul']);
     $aturan = $_POST['aturan_pemilih'];
+    $waktu_mulai = !empty($_POST['waktu_mulai']) ? $_POST['waktu_mulai'] : null;
+    $waktu_selesai = !empty($_POST['waktu_selesai']) ? $_POST['waktu_selesai'] : null;
     
-    $stmt = $pdo->prepare("INSERT INTO eskul (nama_eskul, aturan_pemilih) VALUES (:nama, :aturan)");
-    $stmt->execute(['nama' => $nama_eskul, 'aturan' => $aturan]);
+    $stmt = $pdo->prepare("INSERT INTO eskul (nama_eskul, aturan_pemilih, waktu_mulai, waktu_selesai) VALUES (:nama, :aturan, :waktu_mulai, :waktu_selesai)");
+    $stmt->execute(['nama' => $nama_eskul, 'aturan' => $aturan, 'waktu_mulai' => $waktu_mulai, 'waktu_selesai' => $waktu_selesai]);
     $pesan_notifikasi = "<script>var notification_type='success'; var notification_title='Informasi'; var notification_message='Berhasil menambahkan ekstrakurikuler baru.';</script>";
 }
 
@@ -29,9 +31,11 @@ if (isset($_POST['edit_eskul'])) {
     $id_eskul = $_POST['id_eskul'];
     $nama_eskul = trim($_POST['nama_eskul']);
     $aturan = $_POST['aturan_pemilih'];
+    $waktu_mulai = !empty($_POST['waktu_mulai']) ? $_POST['waktu_mulai'] : null;
+    $waktu_selesai = !empty($_POST['waktu_selesai']) ? $_POST['waktu_selesai'] : null;
     
-    $stmt = $pdo->prepare("UPDATE eskul SET nama_eskul = :nama, aturan_pemilih = :aturan WHERE id_eskul = :id");
-    $stmt->execute(['nama' => $nama_eskul, 'aturan' => $aturan, 'id' => $id_eskul]);
+    $stmt = $pdo->prepare("UPDATE eskul SET nama_eskul = :nama, aturan_pemilih = :aturan, waktu_mulai = :waktu_mulai, waktu_selesai = :waktu_selesai WHERE id_eskul = :id");
+    $stmt->execute(['nama' => $nama_eskul, 'aturan' => $aturan, 'waktu_mulai' => $waktu_mulai, 'waktu_selesai' => $waktu_selesai, 'id' => $id_eskul]);
     $pesan_notifikasi = "<script>var notification_type='info'; var notification_title='Informasi'; var notification_message='Data ekstrakurikuler berhasil diperbarui.';</script>";
 }
 
@@ -112,7 +116,8 @@ $data_eskul = $stmt_tampil->fetchAll();
                             <th>No</th>
                             <th>Nama Ekstrakurikuler</th>
                             <th>Aturan Pemilih</th>
-                            <th>Status Pemilihan</th>
+                            <th>Jadwal Otomatis</th>
+                            <th>Status Manual</th>
                             <th class="text-center">Aksi</th>
                         </tr>
                     </thead>
@@ -130,11 +135,19 @@ $data_eskul = $stmt_tampil->fetchAll();
                                         <?php endif; ?>
                                     </td>
                                     <td>
+                                        <?php if (!empty($row['waktu_mulai']) && !empty($row['waktu_selesai'])): ?>
+                                            <small class="d-block text-success"><i class="fas fa-clock"></i> Mulai: <br><?= date('d M Y H:i', strtotime($row['waktu_mulai'])); ?></small>
+                                            <small class="d-block text-danger"><i class="fas fa-flag-checkered"></i> Selesai: <br><?= date('d M Y H:i', strtotime($row['waktu_selesai'])); ?></small>
+                                        <?php else: ?>
+                                            <span class="badge bg-secondary">Tanpa Jadwal</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
                                         <!-- Menampilkan Badge Buka/Tutup -->
                                         <?php if (isset($row['status_pemilihan']) && $row['status_pemilihan'] == 1): ?>
-                                            <span class="badge bg-success py-2 px-3"><i class="fas fa-door-open me-1"></i> Sedang Buka</span>
+                                            <span class="badge bg-success py-2 px-3"><i class="fas fa-door-open me-1"></i> Terbuka</span>
                                         <?php else: ?>
-                                            <span class="badge bg-secondary py-2 px-3"><i class="fas fa-door-closed me-1"></i> Ditutup</span>
+                                            <span class="badge bg-danger py-2 px-3"><i class="fas fa-door-closed me-1"></i> Ditutup</span>
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-center">
@@ -188,6 +201,17 @@ $data_eskul = $stmt_tampil->fetchAll();
                                                             <option value="semua_siswa" <?= $row['aturan_pemilih'] == 'semua_siswa' ? 'selected' : ''; ?>>Semua Siswa (Terbuka)</option>
                                                             <option value="hanya_anggota" <?= $row['aturan_pemilih'] == 'hanya_anggota' ? 'selected' : ''; ?>>Hanya Anggota (Tertutup)</option>
                                                         </select>
+                                                    </div>
+                                                    <div class="row">
+                                                        <div class="col-6 mb-3">
+                                                            <label>Waktu Mulai</label>
+                                                            <input type="datetime-local" name="waktu_mulai" class="form-control" value="<?= !empty($row['waktu_mulai']) ? date('Y-m-d\TH:i', strtotime($row['waktu_mulai'])) : ''; ?>">
+                                                        </div>
+                                                        <div class="col-6 mb-3">
+                                                            <label>Waktu Selesai</label>
+                                                            <input type="datetime-local" name="waktu_selesai" class="form-control" value="<?= !empty($row['waktu_selesai']) ? date('Y-m-d\TH:i', strtotime($row['waktu_selesai'])) : ''; ?>">
+                                                        </div>
+                                                        <small class="text-muted d-block mt-1 mb-3">* Kosongkan jika ingin membuka/menutup pemilihan secara manual sepenuhnya.</small>
                                                     </div>
                                                 </div>
                                                 <div class="modal-footer">
@@ -254,6 +278,16 @@ $data_eskul = $stmt_tampil->fetchAll();
                                 <option value="semua_siswa">Semua Siswa (Terbuka)</option>
                                 <option value="hanya_anggota">Hanya Anggota (Tertutup)</option>
                             </select>
+                        </div>
+                        <div class="row">
+                            <div class="col-6 mb-3">
+                                <label class="form-label">Waktu Mulai <small class="text-muted">(Opsional)</small></label>
+                                <input type="datetime-local" name="waktu_mulai" class="form-control">
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label class="form-label">Waktu Selesai <small class="text-muted">(Opsional)</small></label>
+                                <input type="datetime-local" name="waktu_selesai" class="form-control">
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">

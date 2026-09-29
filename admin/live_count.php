@@ -46,7 +46,10 @@ $id_eskul_pilih = isset($_GET['id_eskul']) ? $_GET['id_eskul'] : (count($daftar_
             </div>
             <div>
                 <?php if ($id_eskul_pilih): ?>
-                    <a href="export_hasil.php?id_eskul=<?= $id_eskul_pilih; ?>" class="btn btn-success me-3">
+                    <a href="berita_acara.php?id_eskul=<?= $id_eskul_pilih; ?>" target="_blank" class="btn btn-danger me-2 shadow-sm">
+                        <i class="fas fa-file-pdf me-1"></i> Cetak Berita Acara
+                    </a>
+                    <a href="export_hasil.php?id_eskul=<?= $id_eskul_pilih; ?>" class="btn btn-success shadow-sm">
                         <i class="fas fa-file-excel me-1"></i> Ekspor ke Excel
                     </a>
                 <?php endif; ?>
@@ -145,7 +148,7 @@ $id_eskul_pilih = isset($_GET['id_eskul']) ? $_GET['id_eskul'] : (count($daftar_
                             htmlGrafik += `
                                 <div class="row align-items-center mb-4">
                                     <div class="col-md-1 col-3 text-center">
-                                        <img src="../uploads/${paslon.foto}" alt="Foto" class="foto-kandidat" onerror="this.onerror=null; this.src='https://via.placeholder.com/150?text=No+Image';">
+                                        <img src="${paslon.foto ? '../uploads/' + paslon.foto : '../uploads/default.png'}" alt="Foto" class="foto-kandidat" onerror="this.onerror=null; this.src='https://via.placeholder.com/150?text=No+Image';">
                                     </div>
                                     <div class="col-md-11 col-9">
                                         <div class="d-flex justify-content-between mb-1">

@@ -39,18 +39,21 @@ if ($siswa['status_pilih'] == 1) {
 }
 
 // 5. MENGAMBIL DAFTAR ESKUL YANG BERHAK DIPILIH
+$current_time = date('Y-m-d H:i:s');
 $stmt_hak_pilih = $pdo->prepare("
-    SELECT e.id_eskul, e.nama_eskul 
+    SELECT e.id_eskul, e.nama_eskul, e.waktu_mulai, e.waktu_selesai
     FROM eskul e 
     WHERE e.status_aktif = 1 
     AND e.status_pemilihan = 1 
+    AND (e.waktu_mulai IS NULL OR e.waktu_mulai <= ?)
+    AND (e.waktu_selesai IS NULL OR e.waktu_selesai >= ?)
     AND e.id_eskul NOT IN (SELECT id_eskul FROM riwayat_pilih WHERE id_siswa = ?)
     AND (
         e.aturan_pemilih = 'semua_siswa' 
         OR e.id_eskul IN (SELECT id_eskul FROM anggota_eskul WHERE id_siswa = ?)
     )
 ");
-$stmt_hak_pilih->execute([$id_siswa, $id_siswa]);
+$stmt_hak_pilih->execute([$current_time, $current_time, $id_siswa, $id_siswa]);
 $daftar_hak_pilih = $stmt_hak_pilih->fetchAll();
 
 // 6. PROSES PENCOBLOSAN (SUBMIT VOTING SECARA OTOMATIS)
@@ -203,7 +206,7 @@ if (isset($_POST['submit_vote_hidden'])) {
             <div class="bg-white p-5 rounded-4 shadow-sm text-center mt-4">
                 <i class="fas fa-calendar-times text-warning" style="font-size: 4rem; margin-bottom: 15px;"></i>
                 <h4 class="fw-bold text-dark">Belum Ada Pemilihan</h4>
-                <p class="text-muted">Saat ini belum ada jadwal pemilihan yang dibuka oleh panitia.</p>
+                <p class="text-muted">Saat ini belum ada jadwal pemilihan yang dibuka oleh panitia, atau waktu pemilihan belum dimulai/sudah ditutup.</p>
             </div>
         <?php else: ?>
             
@@ -249,7 +252,8 @@ if (isset($_POST['submit_vote_hidden'])) {
                                             
                                             <div class="card card-kandidat position-relative">
                                                 <div class="no-urut"><?= $kan['no_urut']; ?></div>
-                                                <img src="../uploads/<?= htmlspecialchars($kan['foto']); ?>" class="foto-kandidat" alt="Foto Kandidat" onerror="this.onerror=null; this.src='https://via.placeholder.com/150?text=No+Image';">
+                                                <?php $foto_src = !empty($kan['foto']) ? '../uploads/' . htmlspecialchars($kan['foto']) : '../uploads/default.png'; ?>
+                                                <img src="<?= $foto_src ?>" class="foto-kandidat" alt="Foto Kandidat" onerror="this.onerror=null; this.src='https://via.placeholder.com/150?text=No+Image';">
                                                 
                                                 <div class="card-body text-center">
                                                     <h6 class="card-title fw-bold text-primary"><?= htmlspecialchars($kan['nama_paslon']); ?></h6>
@@ -402,6 +406,19 @@ if (isset($_POST['submit_vote_hidden'])) {
             prevDiv.classList.replace('d-none', 'd-block');
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
+
+        // KIOSK MODE / ANTI-CHEAT LISTENER
+        document.addEventListener("visibilitychange", function() {
+            if (document.hidden) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Peringatan Keamanan!',
+                    text: 'Aktivitas berpindah aplikasi atau tab telah terdeteksi. Harap tetap berada di halaman pemilihan untuk mencegah pembatalan suara Anda.',
+                    confirmButtonText: 'Saya Mengerti',
+                    allowOutsideClick: false
+                });
+            }
+        });
     </script>
 </body>
 </html>

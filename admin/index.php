@@ -49,8 +49,13 @@ $stmt_eskul = $pdo->query("
 $rekap_eskul = $stmt_eskul->fetchAll();
 
 // F. LOG VIEWER
-$stmt_log = $pdo->query("SELECT a.username, l.aktivitas, l.waktu FROM log_aktivitas l JOIN admin a ON l.id_admin = a.id_admin ORDER BY l.waktu DESC LIMIT 50");
-$data_log = $stmt_log->fetchAll();
+try {
+    $stmt_log = $pdo->query("SELECT a.username, l.aktivitas, l.waktu FROM log_aktivitas l JOIN admin a ON l.id_admin = a.id_admin ORDER BY l.waktu DESC LIMIT 50");
+    $data_log = $stmt_log ? $stmt_log->fetchAll() : [];
+} catch (PDOException $e) {
+    // Graceful degradation if log table hasn't been created yet
+    $data_log = [];
+}
 
 // G. PROGRESS BAR PERCENTAGE
 $persentase_pemilih = ($total_siswa > 0) ? round(($siswa_sudah / $total_siswa) * 100, 1) : 0;
@@ -155,10 +160,15 @@ $persentase_pemilih = ($total_siswa > 0) ? round(($siswa_sudah / $total_siswa) *
                             <span class="fw-bold text-primary"><i class="fas fa-chart-line me-2"></i> Progress Partisipasi Pemilih</span>
                             <span class="fw-bold text-success"><?= $persentase_pemilih; ?>% Selesai</span>
                         </div>
-                        <div class="progress rounded-pill" style="height: 25px;">
+                        <div class="progress rounded-pill mb-4" style="height: 25px;">
                             <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" style="width: <?= $persentase_pemilih; ?>%;" aria-valuenow="<?= $persentase_pemilih; ?>" aria-valuemin="0" aria-valuemax="100">
                                 <?= $persentase_pemilih > 5 ? $persentase_pemilih . '%' : '' ?>
                             </div>
+                        </div>
+
+                        <!-- GRAFIK ANALITIK PEMILIH PER KELAS -->
+                        <div class="chart-container" style="position: relative; height:40vh; width:100%">
+                            <canvas id="partisipasiChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -321,7 +331,60 @@ $persentase_pemilih = ($total_siswa > 0) ? round(($siswa_sudah / $total_siswa) *
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
     
+    <!-- CHART.JS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <script>
+        // Init Chart Partisipasi Pemilih
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('api_analitik.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) return;
+
+                    const labels = data.map(item => item.kelas);
+                    const sudah = data.map(item => item.sudah_memilih);
+                    const belum = data.map(item => item.belum_memilih);
+
+                    const ctx = document.getElementById('partisipasiChart').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [
+                                {
+                                    label: 'Sudah Memilih',
+                                    data: sudah,
+                                    backgroundColor: 'rgba(56, 239, 125, 0.8)',
+                                    borderColor: 'rgba(56, 239, 125, 1)',
+                                    borderWidth: 1
+                                },
+                                {
+                                    label: 'Belum Memilih',
+                                    data: belum,
+                                    backgroundColor: 'rgba(242, 153, 74, 0.8)',
+                                    borderColor: 'rgba(242, 153, 74, 1)',
+                                    borderWidth: 1
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: { stacked: true },
+                                y: { stacked: true, beginAtZero: true }
+                            },
+                            plugins: {
+                                legend: { position: 'top' },
+                                title: { display: true, text: 'Grafik Partisipasi Pemilih Berdasarkan Kelas' }
+                            }
+                        }
+                    });
+                })
+                .catch(err => console.error("Gagal memuat analitik: ", err));
+        });
+
         $(document).ready(function() {
             $('#tabelLog').DataTable({
                 "language": {
