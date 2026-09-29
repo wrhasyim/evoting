@@ -48,6 +48,13 @@ $stmt_eskul = $pdo->query("
 ");
 $rekap_eskul = $stmt_eskul->fetchAll();
 
+// F. LOG VIEWER
+$stmt_log = $pdo->query("SELECT a.username, l.aktivitas, l.waktu FROM log_aktivitas l JOIN admin a ON l.id_admin = a.id_admin ORDER BY l.waktu DESC LIMIT 50");
+$data_log = $stmt_log->fetchAll();
+
+// G. PROGRESS BAR PERCENTAGE
+$persentase_pemilih = ($total_siswa > 0) ? round(($siswa_sudah / $total_siswa) * 100, 1) : 0;
+
 ?>
 
 <!DOCTYPE html>
@@ -136,6 +143,61 @@ $rekap_eskul = $stmt_eskul->fetchAll();
                     <h5>Belum Memilih</h5>
                     <h2><?= $siswa_belum; ?> <span class="fs-5 fw-normal">Siswa</span></h2>
                     <i class="fas fa-hourglass-half icon-bg"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="fw-bold text-primary"><i class="fas fa-chart-line me-2"></i> Progress Partisipasi Pemilih</span>
+                            <span class="fw-bold text-success"><?= $persentase_pemilih; ?>% Selesai</span>
+                        </div>
+                        <div class="progress rounded-pill" style="height: 25px;">
+                            <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" style="width: <?= $persentase_pemilih; ?>%;" aria-valuenow="<?= $persentase_pemilih; ?>" aria-valuemin="0" aria-valuemax="100">
+                                <?= $persentase_pemilih > 5 ? $persentase_pemilih . '%' : '' ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- LOG VIEWER -->
+            <div class="col-12 mb-4">
+                <div class="table-container">
+                    <h5 class="fw-bold mb-4 text-primary"><i class="fas fa-history me-2"></i> Log Aktivitas Admin</h5>
+                    <div class="table-responsive">
+                        <table id="tabelLog" class="table table-hover align-middle w-100">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>No</th>
+                                    <th>Waktu</th>
+                                    <th>Admin</th>
+                                    <th>Aktivitas</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (count($data_log) > 0): ?>
+                                    <?php $no = 1; foreach ($data_log as $log): ?>
+                                        <tr>
+                                            <td class="text-muted"><?= $no++; ?></td>
+                                            <td><?= htmlspecialchars($log['waktu']); ?></td>
+                                            <td class="fw-bold"><?= htmlspecialchars($log['username']); ?></td>
+                                            <td><?= htmlspecialchars($log['aktivitas']); ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="4" class="text-center py-4 text-muted">Belum ada log aktivitas.</td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -261,6 +323,15 @@ $rekap_eskul = $stmt_eskul->fetchAll();
     
     <script>
         $(document).ready(function() {
+            $('#tabelLog').DataTable({
+                "language": {
+                    "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json"
+                },
+                "pageLength": 10,
+                "ordering": true,
+                "order": [[ 1, "desc" ]] // Sort by waktu by default
+            });
+
             var table = $('#tabelBodong').DataTable({
                 "language": {
                     "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json"
@@ -347,5 +418,6 @@ $rekap_eskul = $stmt_eskul->fetchAll();
             });
         });
     </script>
+<?php include 'footer.php'; ?>
 </body>
 </html>

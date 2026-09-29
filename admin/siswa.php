@@ -40,6 +40,7 @@ if ($periode_aktif) {
 
 // 1. PROSES TAMBAH SISWA MANUAL
 if (isset($_POST['tambah_siswa']) && $id_periode_aktif) {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
     $nis = trim($_POST['nis']);
     $nama = trim($_POST['nama_siswa']);
     $kelas = trim($_POST['kelas']);
@@ -51,16 +52,17 @@ if (isset($_POST['tambah_siswa']) && $id_periode_aktif) {
     $cek_nis->execute(['nis' => $nis, 'id_periode' => $id_periode_aktif]);
     
     if ($cek_nis->rowCount() > 0) {
-        $pesan_notifikasi = "<div class='alert alert-danger'>Gagal: NIS <b>$nis</b> sudah terdaftar di periode ini!</div>";
+        $pesan_notifikasi = "<script>var notification_type='error'; var notification_title='Informasi'; var notification_message='Gagal: NIS <b>$nis</b> sudah terdaftar di periode ini!';</script>";
     } else {
         $stmt = $pdo->prepare("INSERT INTO siswa (id_periode, nis, nama_siswa, kelas, pin) VALUES (:id_periode, :nis, :nama, :kelas, :pin)");
         $stmt->execute(['id_periode' => $id_periode_aktif, 'nis' => $nis, 'nama' => $nama, 'kelas' => $kelas, 'pin' => $pin]);
-        $pesan_notifikasi = "<div class='alert alert-success'>Berhasil menambah siswa. PIN untuk <b>$nama</b> adalah: <b>$pin</b></div>";
+        $pesan_notifikasi = "<script>var notification_type='success'; var notification_title='Informasi'; var notification_message='Berhasil menambah siswa. PIN untuk <b>$nama</b> adalah: <b>$pin</b>';</script>";
     }
 }
 
 // 2. PROSES IMPORT DATA MASSAL (CSV)
 if (isset($_POST['import_csv']) && $id_periode_aktif) {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
     $ekstensi_diizinkan = ['csv', 'txt'];
     $nama_file = $_FILES['file_csv']['name'];
     $pecah_nama = explode('.', $nama_file);
@@ -97,27 +99,29 @@ if (isset($_POST['import_csv']) && $id_periode_aktif) {
             }
         }
         fclose($file_buka);
-        $pesan_notifikasi = "<div class='alert alert-info'>Import Selesai. <b>$sukses</b> data ditambahkan. <b>$gagal</b> data dilewati (duplikat di periode ini).</div>";
+        $pesan_notifikasi = "<script>var notification_type='info'; var notification_title='Informasi'; var notification_message='Import Selesai. <b>$sukses</b> data ditambahkan. <b>$gagal</b> data dilewati (duplikat di periode ini).';</script>";
     }
 }
 
 // 3. PROSES EDIT SISWA
 if (isset($_POST['edit_siswa'])) {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
     $id_siswa = $_POST['id_siswa']; 
     $nama = trim($_POST['nama_siswa']);
     $kelas = trim($_POST['kelas']);
     
     $stmt = $pdo->prepare("UPDATE siswa SET nama_siswa = :nama, kelas = :kelas WHERE id_siswa = :id_siswa");
     $stmt->execute(['nama' => $nama, 'kelas' => $kelas, 'id_siswa' => $id_siswa]);
-    $pesan_notifikasi = "<div class='alert alert-success'>Data siswa berhasil diperbarui!</div>";
+    $pesan_notifikasi = "<script>var notification_type='success'; var notification_title='Informasi'; var notification_message='Data siswa berhasil diperbarui!';</script>";
 }
 
 // 4. PROSES HAPUS SISWA (SOFT DELETE)
 if (isset($_POST['hapus_siswa'])) {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
     $id_siswa = $_POST['id_siswa_hapus'];
     $stmt = $pdo->prepare("UPDATE siswa SET status_aktif = 0 WHERE id_siswa = :id_siswa");
     $stmt->execute(['id_siswa' => $id_siswa]);
-    $pesan_notifikasi = "<div class='alert alert-warning'>Data siswa telah dipindahkan ke Tempat Sampah.</div>";
+    $pesan_notifikasi = "<script>var notification_type='warning'; var notification_title='Informasi'; var notification_message='Data siswa telah dipindahkan ke Tempat Sampah.';</script>";
 }
 
 // MENGAMBIL DATA SISWA UNTUK TABEL UTAMA
@@ -148,6 +152,7 @@ if ($id_periode_aktif) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manajemen Siswa - E-Voting</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -244,6 +249,7 @@ if ($id_periode_aktif) {
                                     <div class="modal-dialog">
                                         <div class="modal-content">
                                             <form method="POST" action="">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                                                 <div class="modal-header">
                                                     <h5 class="modal-title">Edit Data Siswa</h5>
                                                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -277,6 +283,7 @@ if ($id_periode_aktif) {
                                     <div class="modal-dialog">
                                         <div class="modal-content">
                                             <form method="POST" action="">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                                                 <div class="modal-header bg-danger text-white">
                                                     <h5 class="modal-title">Konfirmasi Penghapusan</h5>
                                                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -310,6 +317,7 @@ if ($id_periode_aktif) {
         <div class="modal-dialog">
             <div class="modal-content">
                 <form method="POST" action="">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                     <div class="modal-header">
                         <h5 class="modal-title fw-bold">Tambah Siswa Baru</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -342,6 +350,7 @@ if ($id_periode_aktif) {
         <div class="modal-dialog">
             <div class="modal-content">
                 <form method="POST" action="" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                     <div class="modal-header bg-success text-white">
                         <h5 class="modal-title fw-bold"><i class="fas fa-file-upload me-2"></i> Import Data Siswa</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -406,6 +415,22 @@ if ($id_periode_aktif) {
         </div>
     </div>
 
+    <!-- SCRIPT WAJIB DATATABLES -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('table.table').DataTable({
+                "language": {
+                    "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json"
+                },
+                "pageLength": 10,
+                "ordering": true
+            });
+        });
+    </script>
+<?php include 'footer.php'; ?>
 </body>
 </html>

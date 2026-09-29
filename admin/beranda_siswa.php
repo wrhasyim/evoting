@@ -55,6 +55,7 @@ $daftar_hak_pilih = $stmt_hak_pilih->fetchAll();
 
 // 6. PROSES PENCOBLOSAN (SUBMIT VOTING SECARA OTOMATIS)
 if (isset($_POST['submit_vote_hidden'])) {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
     $pilihan = $_POST['pilihan_kandidat'] ?? [];
     
     if (count($pilihan) != count($daftar_hak_pilih)) {
@@ -212,6 +213,7 @@ if (isset($_POST['submit_vote_hidden'])) {
             ?>
 
             <form method="POST" action="" id="formVoting">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                 
                 <?php foreach ($daftar_hak_pilih as $eskul): ?>
                     <div id="step-<?= $index; ?>" class="wizard-step bg-white rounded-4 shadow-sm <?= $index === 0 ? 'd-block' : 'd-none'; ?>">
