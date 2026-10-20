@@ -1,40 +1,40 @@
 <?php
-// index.php (Berada di root folder evoting)
+// index.php (Root folder evoting)
 
-// 1. Memulai sesi
 session_start();
-
-// 2. Memanggil file koneksi (karena ini di root, langsung panggil config/)
 require 'config/koneksi.php';
 
-// --- FITUR BANTUAN OTOMATIS: Buat admin default jika tabel kosong ---
+// FITUR BANTUAN OTOMATIS: Buat admin default jika tabel kosong
 $cek_admin = $pdo->query("SELECT COUNT(*) FROM admin")->fetchColumn();
 if ($cek_admin == 0) {
     $password_default = password_hash('admin123', PASSWORD_DEFAULT);
     $stmt = $pdo->prepare("INSERT INTO admin (username, password, nama_lengkap) VALUES ('admin', :pass, 'Administrator Utama')");
     $stmt->execute(['pass' => $password_default]);
 }
-// ------------------------------------------------------------------
 
-// 3. Pengecekan Sesi: Arahkan jika sudah dalam keadaan login
+// Pengecekan Sesi: Arahkan jika sudah dalam keadaan login
 if (isset($_SESSION['admin_logged_in'])) {
     header("Location: admin/index.php");
     exit;
 }
 if (isset($_SESSION['siswa_logged_in'])) {
-    // PERBAIKAN: Arahkan siswa ke folder admin tempat file tersebut berada
     header("Location: admin/beranda_siswa.php"); 
     exit;
 }
 
 $error_pesan = '';
+$sukses_pesan = '';
 
-// 4. Logika Smart Login (Berjalan saat tombol masuk ditekan)
+if (isset($_GET['voted'])) {
+    $sukses_pesan = 'Terima kasih! Suara Anda telah berhasil direkam dalam sistem.';
+}
+
+// Logika Smart Login (Berjalan saat tombol masuk ditekan)
 if (isset($_POST['login'])) {
     verify_csrf_token($_POST['csrf_token'] ?? '');
 
     $userid = trim($_POST['userid']);
-    $credential = $_POST['credential'];
+    $credential = trim($_POST['credential']);
 
     // SKENARIO A: Cek apakah ini Admin?
     $stmt_admin = $pdo->prepare("SELECT * FROM admin WHERE username = :userid");
@@ -42,13 +42,11 @@ if (isset($_POST['login'])) {
     $admin_data = $stmt_admin->fetch();
 
     if ($admin_data && password_verify($credential, $admin_data['password'])) {
-        // Ini adalah Admin, set sesi admin
         session_regenerate_id(true);
         $_SESSION['admin_logged_in'] = true;
         $_SESSION['id_admin'] = $admin_data['id_admin'];
         $_SESSION['nama_lengkap'] = $admin_data['nama_lengkap'];
         
-        // Catat log
         $log = $pdo->prepare("INSERT INTO log_aktivitas (id_admin, aktivitas) VALUES (:id, 'Login ke sistem')");
         $log->execute(['id' => $admin_data['id_admin']]);
 
@@ -56,30 +54,25 @@ if (isset($_POST['login'])) {
         exit;
     } 
     else {
-        // SKENARIO B: Jika bukan Admin, cek apakah ini Siswa?
-        // Catatan: PIN siswa diasumsikan disimpan sebagai teks biasa (plain text) dari hasil generate
+        // SKENARIO B: Cek apakah ini Siswa?
         $stmt_siswa = $pdo->prepare("SELECT * FROM siswa WHERE nis = :userid AND pin = :credential AND status_aktif = 1");
         $stmt_siswa->execute(['userid' => $userid, 'credential' => $credential]);
         $siswa_data = $stmt_siswa->fetch();
 
         if ($siswa_data) {
-            // Cek apakah siswa sudah pernah memilih
             if ($siswa_data['status_pilih'] == 1) {
-                $error_pesan = "Akses Ditolak: Anda sudah memberikan suara.";
+                $error_pesan = "Akses Ditolak: Anda sudah memberikan suara pada pemilihan ini.";
             } else {
-                // Ini adalah Siswa yang sah, set sesi siswa
                 session_regenerate_id(true);
                 $_SESSION['siswa_logged_in'] = true;
                 $_SESSION['nis'] = $siswa_data['nis'];
                 $_SESSION['nama_siswa'] = $siswa_data['nama_siswa'];
                 
-                // PERBAIKAN: Arahkan siswa ke folder admin tempat file tersebut berada
                 header("Location: admin/beranda_siswa.php"); 
                 exit;
             }
         } else {
-            // SKENARIO C: Tidak terdaftar di admin maupun siswa
-            $error_pesan = "ID Pengguna atau Kata Sandi / PIN salah!";
+            $error_pesan = "ID Pengguna (Username/NIS) atau Kata Sandi / PIN tidak sesuai!";
         }
     }
 }
@@ -90,172 +83,356 @@ if (isset($_POST['login'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - E-Voting SMK</title>
-    <!-- Google Fonts: Poppins -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Bootstrap 5 CSS -->
+    <title>Masuk Sistem - E-Voting SMK Taruna Karya Mandiri</title>
+    <!-- Google Fonts & Bootstrap 5 -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #0d9488 100%);
+            --btn-gradient: linear-gradient(135deg, #2563eb 0%, #06b6d4 100%);
+        }
+
         body { 
-            font-family: 'Poppins', sans-serif; 
-            background: linear-gradient(135deg, #1a2980 0%, #26d0ce 100%);
+            font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; 
+            background: var(--primary-gradient);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0;
             padding: 20px;
+            position: relative;
+            overflow-x: hidden;
         }
+
+        /* Elemen Dekoratif Latar Belakang */
+        body::before {
+            content: '';
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(14, 165, 233, 0.25) 0%, rgba(0,0,0,0) 70%);
+            top: -100px;
+            left: -100px;
+            z-index: 0;
+        }
+
+        body::after {
+            content: '';
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(20, 184, 166, 0.2) 0%, rgba(0,0,0,0) 70%);
+            bottom: -150px;
+            right: -100px;
+            z-index: 0;
+        }
+
         .login-card {
             background: #ffffff;
-            border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            border-radius: 24px;
+            box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.4);
             overflow: hidden;
             width: 100%;
-            max-width: 900px;
+            max-width: 940px;
             display: flex;
             flex-direction: row;
+            position: relative;
+            z-index: 1;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
+
         .login-left {
-            /* Placeholder gambar sekolah atau elemen abstrak */
-            background: url('https://images.unsplash.com/photo-1546422904-90eab23c3d7e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80') center/cover no-repeat;
-            width: 50%;
+            background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
+            width: 48%;
             position: relative;
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 40px;
+            overflow: hidden;
         }
+
         .login-left::before {
             content: '';
             position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: linear-gradient(135deg, rgba(26,41,128,0.85) 0%, rgba(38,208,206,0.85) 100%);
+            top: -50%;
+            right: -50%;
+            bottom: -50%;
+            left: -50%;
+            background: radial-gradient(circle at center, rgba(37, 99, 235, 0.3) 0%, transparent 60%);
+            pointer-events: none;
         }
+
         .left-content {
             position: relative;
-            z-index: 1;
+            z-index: 2;
             color: white;
             text-align: center;
-            padding: 40px;
         }
-        .left-content i {
-            font-size: 4rem;
-            margin-bottom: 20px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+
+        .logo-box {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px auto;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
         }
-        .login-right {
-            width: 50%;
-            padding: 50px 40px;
-            background: white;
+
+        .logo-box img {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
         }
-        .input-group-text {
-            background-color: transparent;
-            border-right: none;
-            color: #6c757d;
+
+        .left-content h2 {
+            font-weight: 800;
+            font-size: 1.6rem;
+            letter-spacing: -0.02em;
+            margin-bottom: 6px;
         }
-        .form-control {
-            border-left: none;
-            padding-left: 0;
-        }
-        .form-control:focus {
-            box-shadow: none;
-            border-color: #dee2e6;
-        }
-        .input-group:focus-within {
-            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-            border-radius: 0.375rem;
-        }
-        .input-group:focus-within .input-group-text,
-        .input-group:focus-within .form-control {
-            border-color: #86b7fe;
-        }
-        .btn-login {
-            background: linear-gradient(135deg, #1a2980 0%, #26d0ce 100%);
-            border: none;
-            padding: 12px;
+
+        .left-content .school-tag {
+            font-size: 0.95rem;
             font-weight: 600;
-            letter-spacing: 1px;
-            transition: transform 0.3s;
+            color: #38bdf8;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
         }
+
+        .left-content p.desc {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            line-height: 1.5;
+            margin-top: 15px;
+        }
+
+        .feature-pills {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 25px;
+            flex-wrap: wrap;
+        }
+
+        .feature-pill {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .login-right {
+            width: 52%;
+            padding: 50px 45px;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .login-header-title {
+            font-weight: 800;
+            font-size: 1.5rem;
+            color: #0f172a;
+            letter-spacing: -0.02em;
+        }
+
+        .login-hint-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 10px 14px;
+            margin-bottom: 20px;
+            font-size: 0.8rem;
+            color: #475569;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .input-group-custom {
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.25s ease;
+            background: #ffffff;
+        }
+
+        .input-group-custom:focus-within {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+        }
+
+        .input-group-custom .input-group-text {
+            background-color: transparent;
+            border: none;
+            color: #94a3b8;
+            padding-left: 16px;
+        }
+
+        .input-group-custom .form-control {
+            border: none;
+            padding: 12px 14px;
+            font-size: 0.92rem;
+            box-shadow: none;
+        }
+
+        .btn-toggle-eye {
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            padding-right: 14px;
+            cursor: pointer;
+        }
+        .btn-toggle-eye:hover {
+            color: #2563eb;
+        }
+
+        .btn-login {
+            background: var(--btn-gradient);
+            border: none;
+            padding: 14px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            border-radius: 12px;
+            color: #ffffff;
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.3);
+            transition: all 0.25s;
+        }
+
         .btn-login:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(38,208,206,0.4);
+            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4);
+            color: #ffffff;
         }
-        /* Mode Mobile (responsif) */
-        @media (max-width: 768px) {
-            .login-card { flex-direction: column; max-width: 450px; }
-            .login-left { width: 100%; padding: 40px 0; }
-            .login-right { width: 100%; padding: 40px 25px; }
+
+        @media (max-width: 820px) {
+            .login-card { flex-direction: column; max-width: 440px; }
+            .login-left { width: 100%; padding: 35px 25px; }
+            .login-right { width: 100%; padding: 35px 25px; }
         }
     </style>
 </head>
 <body>
 
-    <div class="container d-flex justify-content-center">
-        <div class="login-card">
-            <!-- Sisi Kiri (Area Branding) -->
-            <div class="login-left d-none d-md-flex">
-                <div class="left-content">
-                    <i class="fas fa-vote-yea"></i>
-                    <h2 class="fw-bold mb-3">E-Voting Terpadu</h2>
-                    <p class="mb-0 fs-5">SMK Taruna Karya Mandiri</p>
-                    <p class="small opacity-75 mt-3">Sistem Pemilihan Ketua OSIS & Ekstrakurikuler yang Jujur, Adil, dan Transparan.</p>
+    <div class="login-card">
+        <!-- Area Branding / Left -->
+        <div class="login-left">
+            <div class="left-content">
+                <div class="logo-box">
+                    <?php if (file_exists('uploads/logo_utama.png')): ?>
+                        <img src="uploads/logo_utama.png" alt="Logo Sekolah">
+                    <?php else: ?>
+                        <i class="fas fa-vote-yea fs-2 text-white"></i>
+                    <?php endif; ?>
+                </div>
+                <h2>E-Voting Terpadu</h2>
+                <div class="school-tag">SMK Taruna Karya Mandiri</div>
+                <p class="desc">
+                    Sistem pemungutan suara elektronik untuk Pemilihan Ketua OSIS & Ekstrakurikuler yang transparan, aman, dan terpercaya.
+                </p>
+                <div class="feature-pills">
+                    <span class="feature-pill"><i class="fas fa-lock me-1"></i> Rahasia</span>
+                    <span class="feature-pill"><i class="fas fa-bolt me-1"></i> Real-time</span>
+                    <span class="feature-pill"><i class="fas fa-shield-alt me-1"></i> Terenkripsi</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Area Form Login / Right -->
+        <div class="login-right">
+            <div class="mb-4">
+                <h3 class="login-header-title">Selamat Datang 👋</h3>
+                <p class="text-muted small m-0">Silakan masuk menggunakan akun atau token akses Anda.</p>
+            </div>
+
+            <div class="login-hint-card">
+                <i class="fas fa-info-circle text-primary fs-5"></i>
+                <div>
+                    <b>Siswa:</b> Gunakan NIS & PIN dari Panitia.<br>
+                    <b>Admin:</b> Gunakan Username & Sandi.
                 </div>
             </div>
 
-            <!-- Sisi Kanan (Area Form Login) -->
-            <div class="login-right">
-                <!-- Header khusus tampilan mobile -->
-                <div class="text-center d-md-none mb-4">
-                    <i class="fas fa-vote-yea fs-1 text-primary mb-2"></i>
-                    <h3 class="fw-bold text-dark">E-Voting SMK</h3>
+            <?php if ($sukses_pesan): ?>
+                <div class="alert alert-success alert-dismissible fade show rounded-3 py-2 px-3 small border-0 shadow-sm" role="alert">
+                    <i class="fas fa-check-circle me-1"></i> <?= $sukses_pesan; ?>
+                    <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($error_pesan): ?>
+                <div class="alert alert-danger alert-dismissible fade show rounded-3 py-2 px-3 small border-0 shadow-sm" role="alert">
+                    <i class="fas fa-exclamation-circle me-1"></i> <?= $error_pesan; ?>
+                    <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <?php endif; ?>
+
+            <form method="POST" action="">
+                <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-dark">ID Pengguna (NIS / Username)</label>
+                    <div class="input-group input-group-custom">
+                        <span class="input-group-text"><i class="fas fa-id-card"></i></span>
+                        <input type="text" name="userid" class="form-control" placeholder="Masukkan NIS atau Username" required autocomplete="off">
+                    </div>
                 </div>
 
-                <h4 class="fw-bold text-dark mb-1">Selamat Datang 👋</h4>
-                <p class="text-muted small mb-4">Silakan masuk menggunakan akun Anda.</p>
-
-                <?php if ($error_pesan): ?>
-                    <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
-                        <i class="fas fa-exclamation-triangle me-2"></i> <?= $error_pesan; ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <div class="mb-4">
+                    <label class="form-label fw-bold small text-dark">PIN Akses / Kata Sandi</label>
+                    <div class="input-group input-group-custom">
+                        <span class="input-group-text"><i class="fas fa-key"></i></span>
+                        <input type="password" id="inputCredential" name="credential" class="form-control" placeholder="Masukkan PIN atau Sandi" required>
+                        <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility()" title="Tampilkan/Sembunyikan">
+                            <i class="fas fa-eye" id="eyeIcon"></i>
+                        </button>
                     </div>
-                <?php endif; ?>
-
-                <form method="POST" action="">
-                    <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
-                    <div class="mb-4">
-                        <label class="form-label fw-semibold small text-dark">Username / NIS</label>
-                        <div class="input-group mb-3 shadow-sm">
-                            <span class="input-group-text bg-light"><i class="fas fa-user"></i></span>
-                            <input type="text" name="userid" class="form-control bg-light" placeholder="Masukkan ID Anda" required autocomplete="off">
-                        </div>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="form-label fw-semibold small text-dark">Kata Sandi / PIN</label>
-                        <div class="input-group shadow-sm">
-                            <span class="input-group-text bg-light"><i class="fas fa-lock"></i></span>
-                            <input type="password" name="credential" class="form-control bg-light" placeholder="Masukkan Sandi atau PIN" required>
-                        </div>
-                    </div>
-
-                    <button type="submit" name="login" class="btn btn-primary btn-login w-100 rounded-pill shadow mt-2">
-                        MASUK SISTEM <i class="fas fa-arrow-right ms-2"></i>
-                    </button>
-                </form>
-                
-                <div class="text-center mt-4">
-                    <span class="badge bg-light text-secondary border px-3 py-2">
-                        <i class="fas fa-shield-alt text-primary me-1"></i> Smart Login System
-                    </span>
                 </div>
+
+                <button type="submit" name="login" class="btn btn-login w-100 mb-3">
+                    MASUK KE SISTEM <i class="fas fa-arrow-right ms-2"></i>
+                </button>
+            </form>
+
+            <div class="text-center pt-2 border-top">
+                <small class="text-muted">
+                    <i class="fas fa-shield-alt text-success me-1"></i> Keamanan Terjamin &bull; E-Voting &copy; <?= date("Y"); ?>
+                </small>
             </div>
         </div>
     </div>
 
-    <!-- Script Bootstrap -->
+    <!-- Bootstrap 5 JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function togglePasswordVisibility() {
+            var input = document.getElementById('inputCredential');
+            var icon = document.getElementById('eyeIcon');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+    </script>
 </body>
 </html>

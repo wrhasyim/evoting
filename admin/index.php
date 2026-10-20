@@ -1,35 +1,33 @@
 <?php
 // admin/index.php
 
-// 1. Memulai sesi dan memanggil koneksi
 session_start();
 require '../config/koneksi.php';
 
-// 2. PENGAMANAN HALAMAN
+// PENGAMANAN HALAMAN
 if (!isset($_SESSION['admin_logged_in'])) {
     header("Location: ../index.php");
     exit;
 }
 
-// 3. LOGIKA ANALITIK (Mengambil data dari database)
-
+// LOGIKA ANALITIK
 // A. Menghitung Total Siswa
-$stmt_total = $pdo->query("SELECT COUNT(*) FROM siswa");
-$total_siswa = $stmt_total->fetchColumn();
+$stmt_total = $pdo->query("SELECT COUNT(*) FROM siswa WHERE status_aktif = 1");
+$total_siswa = (int) $stmt_total->fetchColumn();
 
 // B. Menghitung Siswa Sudah Memilih
-$stmt_sudah = $pdo->query("SELECT COUNT(*) FROM siswa WHERE status_pilih = 1");
-$siswa_sudah = $stmt_sudah->fetchColumn();
+$stmt_sudah = $pdo->query("SELECT COUNT(*) FROM siswa WHERE status_pilih = 1 AND status_aktif = 1");
+$siswa_sudah = (int) $stmt_sudah->fetchColumn();
 
 // C. Menghitung Siswa Belum Memilih
-$stmt_belum = $pdo->query("SELECT COUNT(*) FROM siswa WHERE status_pilih = 0");
-$siswa_belum = $stmt_belum->fetchColumn();
+$stmt_belum = $pdo->query("SELECT COUNT(*) FROM siswa WHERE status_pilih = 0 AND status_aktif = 1");
+$siswa_belum = (int) $stmt_belum->fetchColumn();
 
 // D. Menghitung Siswa Tanpa Eskul (Siswa Bodong)
-$stmt_bodong = $pdo->query("SELECT COUNT(*) FROM siswa WHERE id_siswa NOT IN (SELECT id_siswa FROM anggota_eskul)");
-$siswa_bodong = $stmt_bodong->fetchColumn();
+$stmt_bodong = $pdo->query("SELECT COUNT(*) FROM siswa WHERE id_siswa NOT IN (SELECT id_siswa FROM anggota_eskul) AND status_aktif = 1");
+$siswa_bodong = (int) $stmt_bodong->fetchColumn();
 
-// FITUR REKAPAN: Mengambil detail data siswa tanpa eskul
+// FITUR REKAPAN: Detail data siswa tanpa eskul
 $stmt_list_bodong = $pdo->query("
     SELECT nis, nama_siswa, kelas 
     FROM siswa 
@@ -39,11 +37,12 @@ $stmt_list_bodong = $pdo->query("
 ");
 $list_siswa_bodong = $stmt_list_bodong->fetchAll();
 
-// E. Mengambil Data Rekap Anggota per Eskul
+// E. Data Rekap Anggota per Eskul
 $stmt_eskul = $pdo->query("
-    SELECT e.nama_eskul, COUNT(a.id_eskul) AS total_anggota 
+    SELECT e.nama_eskul, e.status_pemilihan, COUNT(a.id_eskul) AS total_anggota 
     FROM eskul e 
     LEFT JOIN anggota_eskul a ON e.id_eskul = a.id_eskul 
+    WHERE e.status_aktif = 1
     GROUP BY e.id_eskul
 ");
 $rekap_eskul = $stmt_eskul->fetchAll();
@@ -54,7 +53,6 @@ $data_log = $stmt_log->fetchAll();
 
 // G. PROGRESS BAR PERCENTAGE
 $persentase_pemilih = ($total_siswa > 0) ? round(($siswa_sudah / $total_siswa) * 100, 1) : 0;
-
 ?>
 
 <!DOCTYPE html>
@@ -67,162 +65,148 @@ $persentase_pemilih = ($total_siswa > 0) ? round(($siswa_sudah / $total_siswa) *
     <!-- CSS Bootstrap 5 & DataTables -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
-    <!-- CSS untuk Tombol Export DataTables -->
     <link href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css" rel="stylesheet">
     
     <!-- Google Fonts & FontAwesome -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <style>
-        body { font-family: 'Poppins', sans-serif; background-color: #f4f7fa; overflow-x: hidden; }
-        .sidebar { height: 100vh; background: linear-gradient(180deg, #1a2980 0%, #26d0ce 100%); color: white; padding-top: 30px; position: fixed; width: 260px; box-shadow: 4px 0 15px rgba(0,0,0,0.1); z-index: 100; }
-        .sidebar-brand { font-weight: 700; font-size: 1.3rem; text-align: center; margin-bottom: 30px; display: flex; flex-direction: column; align-items: center; }
-        .sidebar-brand i { font-size: 2rem; margin-bottom: 10px; }
-        .sidebar a { color: rgba(255,255,255,0.85); text-decoration: none; padding: 15px 25px; display: block; font-weight: 500; transition: all 0.3s ease; }
-        .sidebar a i { margin-right: 12px; width: 20px; text-align: center; }
-        .sidebar a:hover, .sidebar .active { background-color: rgba(255,255,255,0.15); color: white; border-left: 5px solid #fff; }
-        .content { margin-left: 260px; padding: 40px; }
-        .top-header { background: white; padding: 15px 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
-        
-        .card-stat { border-radius: 15px; color: white; padding: 25px; box-shadow: 0 10px 20px rgba(0,0,0,0.08); position: relative; overflow: hidden; transition: transform 0.3s ease, box-shadow 0.3s ease; border: none; }
-        .card-stat:hover { transform: translateY(-7px); box-shadow: 0 15px 25px rgba(0,0,0,0.15); }
-        .card-stat h5 { font-weight: 500; font-size: 1.1rem; opacity: 0.9; z-index: 2; position: relative; }
-        .card-stat h2 { font-weight: 700; font-size: 2.2rem; margin-top: 10px; z-index: 2; position: relative; }
-        .card-stat .icon-bg { position: absolute; right: -10px; bottom: -20px; font-size: 7rem; opacity: 0.2; z-index: 1; }
-
-        .bg-grad-primary { background: linear-gradient(135deg, #4e54c8, #8f94fb); }
-        .bg-grad-success { background: linear-gradient(135deg, #11998e, #38ef7d); }
-        .bg-grad-warning { background: linear-gradient(135deg, #f2994a, #f2c94c); color: #333 !important; }
-        .bg-grad-warning h5, .bg-grad-warning h2, .bg-grad-warning .icon-bg { color: #333; opacity: 0.7; }
-
-        .table-container { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 10px 20px rgba(0,0,0,0.04); border: none; }
-        
-        .dataTables_wrapper .row { margin-bottom: 10px; }
-        .dataTables_filter input { border-radius: 6px; border: 1px solid #dee2e6; padding: 4px 10px; }
-        .dt-buttons .btn { margin-right: 5px; margin-bottom: 10px; } 
-    </style>
+    <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
 
-    <!-- MEMANGGIL SIDEBAR -->
+    <!-- NAVBAR ATAS -->
     <?php include 'sidebar.php'; ?>
 
     <!-- KONTEN UTAMA -->
     <div class="content">
         
+        <!-- HEADER DASHBOARD -->
         <div class="top-header">
             <div>
-                <h4 class="m-0 fw-bold" style="color: #2c3e50;">Ringkasan Sistem</h4>
-                <small class="text-muted">Pantau aktivitas pemilihan secara real-time</small>
+                <h4>Ringkasan Sistem E-Voting</h4>
+                <small class="text-muted">Pantau aktivitas pemilihan, status partisipasi pemilih, dan rekapan suara secara real-time</small>
             </div>
-            <div>
-                <span class="badge bg-primary p-2 fs-6 rounded-pill">
-                    <i class="fas fa-user-circle me-1"></i> <?= htmlspecialchars($_SESSION['nama_lengkap'] ?? 'Admin'); ?>
-                </span>
+            <div class="d-flex align-items-center gap-2">
+                <a href="cetak_pin.php" target="_blank" class="btn btn-primary btn-pill">
+                    <i class="fas fa-print"></i> Cetak Token Pemilih
+                </a>
+                <a href="live_count.php" class="btn btn-outline-primary btn-pill">
+                    <i class="fas fa-chart-line text-warning"></i> Pantau Live Count
+                </a>
             </div>
         </div>
         
-        <div class="row mb-4">
-            <div class="col-md-4 mb-3">
+        <!-- METRIC KPI CARDS -->
+        <div class="row g-3 mb-4">
+            <div class="col-sm-6 col-lg-3">
                 <div class="card-stat bg-grad-primary">
-                    <h5>Total Pemilih</h5>
-                    <h2><?= $total_siswa; ?> <span class="fs-5 fw-normal">Siswa</span></h2>
+                    <div>
+                        <h5>Total Pemilih</h5>
+                        <h2><?= number_format($total_siswa); ?> <span class="fs-6 fw-normal opacity-75">Siswa</span></h2>
+                    </div>
+                    <div class="d-flex align-items-center justify-content-between mt-2 pt-2 border-top border-white border-opacity-25 small opacity-90">
+                        <span>Data Terdaftar Aktif</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
                     <i class="fas fa-users icon-bg"></i>
                 </div>
             </div>
-            <div class="col-md-4 mb-3">
+            <div class="col-sm-6 col-lg-3">
                 <div class="card-stat bg-grad-success">
-                    <h5>Sudah Memilih</h5>
-                    <h2><?= $siswa_sudah; ?> <span class="fs-5 fw-normal">Siswa</span></h2>
-                    <i class="fas fa-check-circle icon-bg"></i>
+                    <div>
+                        <h5>Sudah Memilih</h5>
+                        <h2><?= number_format($siswa_sudah); ?> <span class="fs-6 fw-normal opacity-75">Siswa</span></h2>
+                    </div>
+                    <div class="d-flex align-items-center justify-content-between mt-2 pt-2 border-top border-white border-opacity-25 small opacity-90">
+                        <span>Partisipasi: <?= $persentase_pemilih; ?>%</span>
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <i class="fas fa-vote-yea icon-bg"></i>
                 </div>
             </div>
-            <div class="col-md-4 mb-3">
+            <div class="col-sm-6 col-lg-3">
                 <div class="card-stat bg-grad-warning">
-                    <h5>Belum Memilih</h5>
-                    <h2><?= $siswa_belum; ?> <span class="fs-5 fw-normal">Siswa</span></h2>
-                    <i class="fas fa-hourglass-half icon-bg"></i>
-                </div>
-            </div>
-        </div>
-
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card border-0 shadow-sm rounded-4">
-                    <div class="card-body p-4">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="fw-bold text-primary"><i class="fas fa-chart-line me-2"></i> Progress Partisipasi Pemilih</span>
-                            <span class="fw-bold text-success"><?= $persentase_pemilih; ?>% Selesai</span>
-                        </div>
-                        <div class="progress rounded-pill" style="height: 25px;">
-                            <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" style="width: <?= $persentase_pemilih; ?>%;" aria-valuenow="<?= $persentase_pemilih; ?>" aria-valuemin="0" aria-valuemax="100">
-                                <?= $persentase_pemilih > 5 ? $persentase_pemilih . '%' : '' ?>
-                            </div>
-                        </div>
+                    <div>
+                        <h5>Belum Memilih</h5>
+                        <h2><?= number_format($siswa_belum); ?> <span class="fs-6 fw-normal opacity-75">Siswa</span></h2>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row">
-            <!-- LOG VIEWER -->
-            <div class="col-12 mb-4">
-                <div class="table-container">
-                    <h5 class="fw-bold mb-4 text-primary"><i class="fas fa-history me-2"></i> Log Aktivitas Admin</h5>
-                    <div class="table-responsive">
-                        <table id="tabelLog" class="table table-hover align-middle w-100">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>No</th>
-                                    <th>Waktu</th>
-                                    <th>Admin</th>
-                                    <th>Aktivitas</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (count($data_log) > 0): ?>
-                                    <?php $no = 1; foreach ($data_log as $log): ?>
-                                        <tr>
-                                            <td class="text-muted"><?= $no++; ?></td>
-                                            <td><?= htmlspecialchars($log['waktu']); ?></td>
-                                            <td class="fw-bold"><?= htmlspecialchars($log['username']); ?></td>
-                                            <td><?= htmlspecialchars($log['aktivitas']); ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="4" class="text-center py-4 text-muted">Belum ada log aktivitas.</td>
-                                    </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
+                    <div class="d-flex align-items-center justify-content-between mt-2 pt-2 border-top border-white border-opacity-25 small opacity-90">
+                        <span>Sisa: <?= ($total_siswa > 0) ? round(($siswa_belum / $total_siswa) * 100, 1) : 0; ?>%</span>
+                        <i class="fas fa-hourglass-half"></i>
                     </div>
+                    <i class="fas fa-user-clock icon-bg"></i>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="card-stat bg-grad-danger">
+                    <div>
+                        <h5>Tanpa Eskul</h5>
+                        <h2><?= number_format($siswa_bodong); ?> <span class="fs-6 fw-normal opacity-75">Siswa</span></h2>
+                    </div>
+                    <div class="d-flex align-items-center justify-content-between mt-2 pt-2 border-top border-white border-opacity-25 small opacity-90">
+                        <span>Perlu Penugasan</span>
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <i class="fas fa-user-slash icon-bg"></i>
                 </div>
             </div>
         </div>
 
-        <div class="row">
-            <div class="col-md-8 mb-4">
-                <div class="table-container h-100">
-                    <h5 class="fw-bold mb-4" style="color: #2c3e50;"><i class="fas fa-list-alt me-2 text-primary"></i> Data Anggota Ekstrakurikuler</h5>
+        <!-- PROGRESS BAR PARTISIPASI -->
+        <div class="card-modern mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h5 class="fw-bold m-0 text-dark"><i class="fas fa-chart-line text-primary me-2"></i> Progress Partisipasi Suara</h5>
+                    <small class="text-muted"><?= $siswa_sudah; ?> dari <?= $total_siswa; ?> siswa telah menyalurkan hak suara</small>
+                </div>
+                <div class="text-end">
+                    <span class="fs-4 fw-bold text-success"><?= $persentase_pemilih; ?>%</span>
+                </div>
+            </div>
+            <div class="progress rounded-pill shadow-sm" style="height: 22px; background-color: #e2e8f0;">
+                <div class="progress-bar bg-success progress-bar-striped progress-bar-animated fw-bold" role="progressbar" style="width: <?= $persentase_pemilih; ?>%;" aria-valuenow="<?= $persentase_pemilih; ?>" aria-valuemin="0" aria-valuemax="100">
+                    <?= $persentase_pemilih >= 8 ? $persentase_pemilih . '%' : '' ?>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- REKAP ESKUL -->
+            <div class="col-lg-7">
+                <div class="card-modern h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                        <h5 class="fw-bold m-0 text-dark">
+                            <i class="fas fa-sitemap text-primary me-2"></i> Ekstrakurikuler & Anggota
+                        </h5>
+                        <a href="eskul.php" class="btn btn-sm btn-outline-primary btn-pill">
+                            Kelola Eskul <i class="fas fa-arrow-right ms-1"></i>
+                        </a>
+                    </div>
                     <div class="table-responsive">
-                        <table class="table table-borderless align-middle">
-                            <thead class="border-bottom">
+                        <table class="table table-hover align-middle">
+                            <thead>
                                 <tr>
-                                    <th>No</th>
+                                    <th style="width: 50px;">No</th>
                                     <th>Nama Ekstrakurikuler</th>
+                                    <th>Status Pemilihan</th>
                                     <th class="text-end">Jumlah Anggota</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if (count($rekap_eskul) > 0): ?>
                                     <?php $no = 1; foreach ($rekap_eskul as $row): ?>
-                                        <tr class="border-bottom">
-                                            <td><span class="text-muted fw-bold"><?= $no++; ?></span></td>
-                                            <td class="fw-medium"><?= htmlspecialchars($row['nama_eskul']); ?></td>
+                                        <tr>
+                                            <td class="text-muted fw-bold"><?= $no++; ?></td>
+                                            <td class="fw-semibold text-dark"><?= htmlspecialchars($row['nama_eskul']); ?></td>
+                                            <td>
+                                                <?php if ($row['status_pemilihan'] == 1): ?>
+                                                    <span class="badge badge-soft-success"><i class="fas fa-door-open me-1"></i> Dibuka</span>
+                                                <?php else: ?>
+                                                    <span class="badge badge-soft-secondary"><i class="fas fa-lock me-1"></i> Ditutup</span>
+                                                <?php endif; ?>
+                                            </td>
                                             <td class="text-end">
-                                                <span class="badge bg-light text-dark border px-3 py-2">
+                                                <span class="badge badge-soft-primary px-3 py-1 font-monospace fs-6">
                                                     <?= $row['total_anggota']; ?> Siswa
                                                 </span>
                                             </td>
@@ -230,8 +214,8 @@ $persentase_pemilih = ($total_siswa > 0) ? round(($siswa_sudah / $total_siswa) *
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="3" class="text-center py-4 text-muted">
-                                            <i class="fas fa-folder-open fs-1 d-block mb-2 opacity-50"></i>
+                                        <td colspan="4" class="text-center py-4 text-muted">
+                                            <i class="fas fa-folder-open fs-2 d-block mb-2 opacity-50"></i>
                                             Belum ada data ekstrakurikuler.
                                         </td>
                                     </tr>
@@ -242,24 +226,78 @@ $persentase_pemilih = ($total_siswa > 0) ? round(($siswa_sudah / $total_siswa) *
                 </div>
             </div>
 
-            <div class="col-md-4 mb-4">
-                <div class="table-container border-start border-danger border-5 h-100 d-flex flex-column justify-content-center" style="background-color: #fffafb;">
-                    <div class="text-center py-4">
-                        <div class="mb-3">
-                            <i class="fas fa-exclamation-triangle text-danger" style="font-size: 3.5rem;"></i>
+            <!-- SISWA TANPA ESKUL WIDGET -->
+            <div class="col-lg-5">
+                <div class="card-modern h-100 d-flex flex-column justify-content-between" style="border-left: 5px solid #ef4444;">
+                    <div>
+                        <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                            <h5 class="fw-bold m-0 text-danger">
+                                <i class="fas fa-user-slash me-2"></i> Siswa Tanpa Eskul
+                            </h5>
+                            <span class="badge badge-soft-danger"><?= $siswa_bodong; ?> Data</span>
                         </div>
-                        <h5 class="fw-bold text-danger">Siswa Tanpa Eskul</h5>
-                        <h1 class="display-3 fw-bold text-danger my-3"><?= $siswa_bodong; ?></h1>
-                        <p class="text-muted small px-3 mb-4">
-                            Jumlah siswa yang belum ditugaskan ke ekstrakurikuler mana pun di dalam sistem.
+                        <p class="text-muted small">
+                            Siswa aktif yang belum dimasukkan ke dalam daftar anggota ekstrakurikuler mana pun di sistem.
                         </p>
+                        <div class="p-3 bg-light rounded-3 text-center my-3">
+                            <div class="display-4 fw-bold text-danger"><?= $siswa_bodong; ?></div>
+                            <span class="text-muted small fw-medium">Siswa belum memiliki eskul</span>
+                        </div>
+                    </div>
+                    <div>
                         <?php if ($siswa_bodong > 0): ?>
-                            <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-4 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalSiswaBodong">
-                                <i class="fas fa-search me-1"></i> Lihat Data Rekapan
+                            <button type="button" class="btn btn-outline-danger w-100 btn-pill" data-bs-toggle="modal" data-bs-target="#modalSiswaBodong">
+                                <i class="fas fa-list me-1"></i> Lihat & Ekspor Rekapan
                             </button>
+                        <?php else: ?>
+                            <div class="text-success small text-center fw-semibold py-2">
+                                <i class="fas fa-check-circle me-1"></i> Semua siswa sudah terdaftar pada ekstrakurikuler!
+                            </div>
                         <?php endif; ?>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- LOG AKTIVITAS -->
+        <div class="card-modern mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                <h5 class="fw-bold m-0 text-dark">
+                    <i class="fas fa-history text-primary me-2"></i> Log Aktivitas Sistem
+                </h5>
+                <small class="text-muted">Menampilkan 50 riwayat aktivitas terakhir</small>
+            </div>
+            <div class="table-responsive">
+                <table id="tabelLog" class="table table-hover align-middle w-100">
+                    <thead>
+                        <tr>
+                            <th style="width: 60px;">No</th>
+                            <th style="width: 180px;">Waktu Kejadian</th>
+                            <th style="width: 150px;">Admin / User</th>
+                            <th>Deskripsi Aktivitas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (count($data_log) > 0): ?>
+                            <?php $no = 1; foreach ($data_log as $log): ?>
+                                <tr>
+                                    <td class="text-muted fw-bold"><?= $no++; ?></td>
+                                    <td class="font-monospace small text-muted"><?= htmlspecialchars($log['waktu']); ?></td>
+                                    <td>
+                                        <span class="badge badge-soft-primary">
+                                            <i class="fas fa-user-shield me-1"></i> <?= htmlspecialchars($log['username']); ?>
+                                        </span>
+                                    </td>
+                                    <td class="fw-medium text-dark"><?= htmlspecialchars($log['aktivitas']); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted">Belum ada log aktivitas tercatat.</td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -268,18 +306,18 @@ $persentase_pemilih = ($total_siswa > 0) ? round(($siswa_sudah / $total_siswa) *
     <!-- MODAL REKAPAN SISWA TANPA ESKUL -->
     <div class="modal fade" id="modalSiswaBodong" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content border-0 shadow">
+            <div class="modal-content">
                 <div class="modal-header bg-danger text-white">
                     <h5 class="modal-title fw-bold">
-                        <i class="fas fa-clipboard-list me-2"></i> Rekapan Siswa Tanpa Eskul
+                        <i class="fas fa-clipboard-list me-2"></i> Rekapan Siswa Tanpa Ekstrakurikuler
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
                     <table id="tabelBodong" class="table table-hover align-middle w-100">
-                        <thead class="table-light">
+                        <thead>
                             <tr>
-                                <th width="10%">No</th>
+                                <th style="width: 60px;">No</th>
                                 <th>NIS</th>
                                 <th>Nama Lengkap</th>
                                 <th>Kelas</th>
@@ -290,9 +328,9 @@ $persentase_pemilih = ($total_siswa > 0) ? round(($siswa_sudah / $total_siswa) *
                                 <?php $no = 1; foreach ($list_siswa_bodong as $s): ?>
                                     <tr>
                                         <td class="text-muted"><?= $no++; ?></td>
-                                        <td class="fw-bold text-primary"><?= htmlspecialchars($s['nis']); ?></td>
+                                        <td class="fw-bold font-monospace text-primary"><?= htmlspecialchars($s['nis']); ?></td>
                                         <td class="fw-medium"><?= htmlspecialchars($s['nama_siswa']); ?></td>
-                                        <td><span class="badge bg-secondary"><?= htmlspecialchars($s['kelas']); ?></span></td>
+                                        <td><span class="badge badge-soft-secondary font-monospace"><?= htmlspecialchars($s['kelas']); ?></span></td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php endif; ?>
@@ -300,19 +338,17 @@ $persentase_pemilih = ($total_siswa > 0) ? round(($siswa_sudah / $total_siswa) *
                     </table>
                 </div>
                 <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Tutup Jendela</button>
+                    <button type="button" class="btn btn-secondary btn-pill px-4" data-bs-dismiss="modal">Tutup</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- SCRIPT WAJIB UNTUK DATATABLES & BOOTSTRAP -->
+    <!-- SCRIPT WAJIB DATATABLES & BOOTSTRAP -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-    
-    <!-- SCRIPT TAMBAHAN UNTUK EXPORT (EXCEL & PDF) -->
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -325,90 +361,40 @@ $persentase_pemilih = ($total_siswa > 0) ? round(($siswa_sudah / $total_siswa) *
         $(document).ready(function() {
             $('#tabelLog').DataTable({
                 "language": {
-                    "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json"
+                    "search": "Cari Log:",
+                    "lengthMenu": "Tampilkan _MENU_",
+                    "info": "Menampilkan _START_ s/d _END_ dari _TOTAL_ log",
+                    "paginate": { "next": "Lanjut", "previous": "Sebelum" }
                 },
                 "pageLength": 10,
                 "ordering": true,
-                "order": [[ 1, "desc" ]] // Sort by waktu by default
+                "order": [[ 1, "desc" ]]
             });
 
             var table = $('#tabelBodong').DataTable({
                 "language": {
-                    "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json"
+                    "search": "Cari:",
+                    "lengthMenu": "Tampilkan _MENU_",
+                    "info": "Total _TOTAL_ siswa",
+                    "paginate": { "next": "Lanjut", "previous": "Sebelum" }
                 },
                 "pageLength": 10, 
                 "ordering": true,
-                "dom": "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
-                       "<'row'<'col-sm-12 mt-2 mb-3 text-center'B>>" +
+                "dom": "<'row mb-2'<'col-sm-6'l><'col-sm-6 text-end'B>>" +
                        "<'row'<'col-sm-12'tr>>" +
-                       "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+                       "<'row mt-2'<'col-sm-5'i><'col-sm-7'p>>",
                 "buttons": [
                     {
                         extend: 'excelHtml5',
-                        className: 'btn btn-success btn-sm fw-bold px-3',
-                        text: '<i class="fas fa-file-excel me-1"></i> Export Excel',
-                        title: 'REKAPITULASI SISWA TANPA EKSTRAKURIKULER',
-                        messageTop: 'Data otomatis digenerate dari Sistem E-Voting',
-                        exportOptions: { columns: [0, 1, 2, 3] }
-                    },
-                    {
-                        extend: 'pdfHtml5',
-                        className: 'btn btn-danger btn-sm fw-bold px-3',
-                        text: '<i class="fas fa-file-pdf me-1"></i> Export PDF',
-                        title: 'REKAPITULASI SISWA TANPA EKSTRAKURIKULER',
-                        pageSize: 'A4',
-                        exportOptions: { columns: [0, 1, 2, 3] },
-                        // Modifikasi khusus tampilan PDF agar elegan
-                        customize: function (doc) {
-                            // Mengatur margin dan alignment teks
-                            doc.content[0].alignment = 'center';
-                            doc.content[0].margin = [0, 0, 0, 15];
-                            
-                            // Mengatur proporsi lebar tabel
-                            doc.content[1].table.widths = ['10%', '25%', '40%', '25%'];
-                            
-                            // Mewarnai judul kolom (Header)
-                            doc.styles.tableHeader.fillColor = '#1a2980';
-                            doc.styles.tableHeader.color = 'white';
-                            doc.styles.tableHeader.alignment = 'center';
-                            
-                            // Merapikan isi teks agar rata kiri
-                            doc.defaultStyle.fontSize = 11;
-                            doc.styles.tableBodyEven.alignment = 'left';
-                            doc.styles.tableBodyOdd.alignment = 'left';
-                        }
+                        className: 'btn btn-success btn-sm btn-pill me-1',
+                        text: '<i class="fas fa-file-excel me-1"></i> Excel',
+                        title: 'REKAPITULASI SISWA TANPA EKSTRAKURIKULER'
                     },
                     {
                         extend: 'print',
-                        className: 'btn btn-secondary btn-sm fw-bold px-3',
-                        text: '<i class="fas fa-print me-1"></i> Cetak Langsung',
-                        title: '', // Dikosongkan karena kita akan membuat judul buatan (custom)
-                        exportOptions: { columns: [0, 1, 2, 3] },
-                        // Modifikasi khusus untuk jendela Print agar mengikuti format kertas yang rapi
-                        customize: function (win) {
-                            $(win.document.body).css('font-family', 'Arial, sans-serif');
-                            
-                            // Menyuntikkan judul yang lebih rapi
-                            $(win.document.body).prepend(
-                                '<div style="text-align:center; margin-bottom:20px;">' +
-                                '<h2 style="margin:0; font-weight:bold;">REKAPITULASI DATA SISWA</h2>' +
-                                '<p style="margin:5px 0 0 0; font-size:14px; color:#555;">Siswa Tanpa Ekstrakurikuler - Sistem E-Voting</p>' +
-                                '<hr style="border-top:2px solid #333;">' +
-                                '</div>'
-                            );
-                            
-                            // Menyuntikkan kode CSS untuk merapikan border dan background tabel
-                            $(win.document.body).find('table')
-                                .css('width', '100%')
-                                .css('border-collapse', 'collapse')
-                                .css('margin-top', '15px');
-                            $(win.document.body).find('th, td')
-                                .css('border', '1px solid #000')
-                                .css('padding', '10px');
-                            $(win.document.body).find('th')
-                                .css('background-color', '#f4f7fa')
-                                .css('text-align', 'center');
-                        }
+                        className: 'btn btn-secondary btn-sm btn-pill',
+                        text: '<i class="fas fa-print me-1"></i> Cetak',
+                        title: 'REKAPITULASI SISWA TANPA EKSTRAKURIKULER'
                     }
                 ]
             });
@@ -418,6 +404,6 @@ $persentase_pemilih = ($total_siswa > 0) ? round(($siswa_sudah / $total_siswa) *
             });
         });
     </script>
-<?php include 'footer.php'; ?>
+    <?php include 'footer.php'; ?>
 </body>
 </html>

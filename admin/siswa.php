@@ -13,10 +13,9 @@ if (!isset($_SESSION['admin_logged_in'])) {
 $pesan_notifikasi = '';
 
 // ==========================================
-// FUNGSI BARU: PEMBUAT PIN ACAK YANG UNIK
+// FUNGSI: PEMBUAT PIN ACAK YANG UNIK
 // ==========================================
 function buatPinAcak($panjang = 6) {
-    // Kumpulan karakter yang digunakan (Sengaja menghindari 0, O, 1, dan I agar siswa tidak salah baca)
     $karakter = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
     $pin = '';
     $max = strlen($karakter) - 1;
@@ -45,7 +44,6 @@ if (isset($_POST['tambah_siswa']) && $id_periode_aktif) {
     $nama = trim($_POST['nama_siswa']);
     $kelas = trim($_POST['kelas']);
     
-    // PEMBARUAN: Memanggil fungsi pembuat PIN baru yang lebih acak
     $pin = buatPinAcak(6);
 
     $cek_nis = $pdo->prepare("SELECT id_siswa FROM siswa WHERE nis = :nis AND id_periode = :id_periode");
@@ -83,7 +81,6 @@ if (isset($_POST['import_csv']) && $id_periode_aktif) {
                 $kelas = trim($data[2]);
                 if (empty($nis)) continue; 
 
-                // PEMBARUAN: Memanggil fungsi pembuat PIN baru yang lebih acak
                 $pin = buatPinAcak(6);
 
                 $cek_nis = $pdo->prepare("SELECT id_siswa FROM siswa WHERE nis = :nis AND id_periode = :id_periode");
@@ -150,51 +147,51 @@ if ($id_periode_aktif) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manajemen Siswa - E-Voting</title>
+    <title>Manajemen Siswa (Pemilih) - E-Voting</title>
+    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Google Fonts & FontAwesome -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body { font-family: 'Poppins', sans-serif; background-color: #f4f7fa; overflow-x: hidden; }
-        .sidebar { height: 100vh; background: linear-gradient(180deg, #1a2980 0%, #26d0ce 100%); color: white; padding-top: 30px; position: fixed; width: 260px; box-shadow: 4px 0 15px rgba(0,0,0,0.1); z-index: 100; }
-        .sidebar-brand { font-weight: 700; font-size: 1.3rem; text-align: center; margin-bottom: 30px; display: flex; flex-direction: column; align-items: center; }
-        .sidebar-brand i { font-size: 2rem; margin-bottom: 10px; }
-        .sidebar a { color: rgba(255,255,255,0.85); text-decoration: none; padding: 15px 25px; display: block; font-weight: 500; transition: all 0.3s ease; }
-        .sidebar a i { margin-right: 12px; width: 20px; text-align: center; }
-        .sidebar a:hover, .sidebar .active { background-color: rgba(255,255,255,0.15); color: white; border-left: 5px solid #fff; }
-        .content { margin-left: 260px; padding: 40px; }
-        .top-header { background: white; padding: 15px 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
-        .table-container { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 10px 20px rgba(0,0,0,0.04); }
-    </style>
+    <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
 
-    <!-- MEMANGGIL SIDEBAR DARI FILE TERPISAH -->
+    <!-- MEMANGGIL NAVBAR/SIDEBAR -->
     <?php include 'sidebar.php'; ?>
 
     <!-- KONTEN UTAMA -->
     <div class="content">
         <div class="top-header">
             <div>
-                <h4 class="m-0 fw-bold" style="color: #2c3e50;">Data Pemilih (Siswa)</h4>
-                <small class="text-primary fw-bold"><i class="fas fa-tags me-1"></i> Periode Saat Ini: <?= htmlspecialchars($nama_periode_aktif); ?></small>
+                <h4>Data Pemilih (Siswa)</h4>
+                <small class="text-muted">
+                    <i class="fas fa-calendar-check text-primary me-1"></i> Periode Aktif: 
+                    <span class="badge badge-soft-primary"><?= htmlspecialchars($nama_periode_aktif); ?></span>
+                    &bull; Total: <b><?= count($data_siswa); ?></b> Siswa
+                </small>
             </div>
-            <div>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
                 <?php if ($id_periode_aktif): ?>
-                    
-                    <button class="btn btn-outline-success rounded-pill px-3 me-2 fw-bold" data-bs-toggle="modal" data-bs-target="#modalDaftarHadir">
-                        <i class="fas fa-file-pdf me-1"></i> Daftar Hadir
+                    <!-- Tombol Cetak PIN Baru (dengan Opsi Modal) -->
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCetakPin">
+                        <i class="fas fa-print"></i> Cetak Token / PIN
+                    </button>
+
+                    <!-- Tombol Daftar Hadir -->
+                    <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalDaftarHadir">
+                        <i class="fas fa-clipboard-check"></i> Daftar Hadir
                     </button>
                     
-                    <a href="cetak_pin.php" target="_blank" class="btn btn-secondary rounded-pill px-3 me-2">
-                        <i class="fas fa-print"></i> Cetak PIN
-                    </a>
-                    <button class="btn btn-success rounded-pill px-4 me-2" data-bs-toggle="modal" data-bs-target="#modalImport">
-                        <i class="fas fa-file-excel me-2"></i> Import CSV
+                    <!-- Tombol Import CSV -->
+                    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalImport">
+                        <i class="fas fa-file-csv"></i> Import CSV
                     </button>
-                    <button class="btn btn-primary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalTambah">
-                        <i class="fas fa-plus me-2"></i> Tambah Manual
+
+                    <!-- Tombol Tambah Siswa Manual -->
+                    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalTambah">
+                        <i class="fas fa-user-plus"></i> Tambah Siswa
                     </button>
                 <?php else: ?>
                     <span class="badge bg-danger p-2"><i class="fas fa-lock me-1"></i> Aktifkan periode terlebih dahulu</span>
@@ -204,74 +201,93 @@ if ($id_periode_aktif) {
 
         <?= $pesan_notifikasi; ?>
 
+        <!-- TABEL DATA SISWA -->
         <div class="table-container">
             <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead class="table-light">
+                <table id="tabelSiswa" class="table table-hover align-middle w-100">
+                    <thead>
                         <tr>
-                            <th>NIS</th>
+                            <th style="width: 120px;">NIS</th>
                             <th>Nama Lengkap</th>
-                            <th>Kelas</th>
-                            <th>PIN Akses</th>
-                            <th>Status Memilih</th>
-                            <th class="text-center">Aksi</th>
+                            <th style="width: 140px;">Kelas</th>
+                            <th style="width: 160px;">Token Akses</th>
+                            <th style="width: 130px;">Status Suara</th>
+                            <th class="text-center" style="width: 110px;">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (count($data_siswa) > 0): ?>
                             <?php foreach ($data_siswa as $row): ?>
                                 <tr>
-                                    <td class="fw-bold"><?= htmlspecialchars($row['nis']); ?></td>
-                                    <td><?= htmlspecialchars($row['nama_siswa']); ?></td>
-                                    <td><span class="badge bg-secondary"><?= htmlspecialchars($row['kelas']); ?></span></td>
-                                    <td><code class="fs-6 text-primary fw-bold"><?= htmlspecialchars($row['pin']); ?></code></td>
+                                    <td class="fw-bold text-dark font-monospace"><?= htmlspecialchars($row['nis']); ?></td>
+                                    <td>
+                                        <div class="fw-semibold text-dark"><?= htmlspecialchars($row['nama_siswa']); ?></div>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-soft-secondary font-monospace"><?= htmlspecialchars($row['kelas']); ?></span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-1">
+                                            <code class="token-pin"><?= htmlspecialchars($row['pin']); ?></code>
+                                            <button type="button" class="btn btn-sm btn-link text-muted p-0 ms-1" onclick="salinToken('<?= htmlspecialchars($row['pin']); ?>')" title="Salin Token">
+                                                <i class="fas fa-copy"></i>
+                                            </button>
+                                        </div>
+                                    </td>
                                     <td>
                                         <?php if ($row['status_pilih'] == 1): ?>
-                                            <span class="badge bg-success"><i class="fas fa-check"></i> Sudah</span>
+                                            <span class="badge badge-soft-success">
+                                                <i class="fas fa-check-circle me-1"></i> Sudah Memilih
+                                            </span>
                                         <?php else: ?>
-                                            <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Belum</span>
+                                            <span class="badge badge-soft-warning">
+                                                <i class="fas fa-clock me-1"></i> Belum Memilih
+                                            </span>
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-center">
-                                        <!-- Tombol Edit -->
-                                        <button class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalEdit<?= $row['id_siswa']; ?>" title="Edit Data">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <!-- Tombol Hapus -->
-                                        <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#modalHapus<?= $row['id_siswa']; ?>" title="Hapus Data">
-                                            <i class="fas fa-trash-alt"></i>
-                                        </button>
+                                        <div class="btn-group btn-group-sm">
+                                            <!-- Tombol Edit -->
+                                            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalEdit<?= $row['id_siswa']; ?>" title="Edit Data">
+                                                <i class="fas fa-pen"></i>
+                                            </button>
+                                            <!-- Tombol Hapus -->
+                                            <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalHapus<?= $row['id_siswa']; ?>" title="Hapus Data">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
 
                                 <!-- MODAL EDIT SISWA -->
                                 <div class="modal fade" id="modalEdit<?= $row['id_siswa']; ?>" tabindex="-1">
-                                    <div class="modal-dialog">
+                                    <div class="modal-dialog modal-dialog-centered">
                                         <div class="modal-content">
                                             <form method="POST" action="">
-                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
+                                                <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
+                                                <input type="hidden" name="id_siswa" value="<?= $row['id_siswa']; ?>">
                                                 <div class="modal-header">
-                                                    <h5 class="modal-title">Edit Data Siswa</h5>
+                                                    <h5 class="modal-title"><i class="fas fa-user-edit text-primary me-2"></i>Edit Data Siswa</h5>
                                                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                                 </div>
                                                 <div class="modal-body">
-                                                    <input type="hidden" name="id_siswa" value="<?= $row['id_siswa']; ?>">
                                                     <div class="mb-3">
-                                                        <label>NIS (Tidak bisa diubah)</label>
-                                                        <input type="text" class="form-control" value="<?= htmlspecialchars($row['nis']); ?>" readonly>
+                                                        <label class="form-label">Nomor Induk Siswa (NIS)</label>
+                                                        <input type="text" class="form-control bg-light" value="<?= htmlspecialchars($row['nis']); ?>" readonly>
+                                                        <small class="text-muted">NIS tidak dapat diubah setelah terdaftar.</small>
                                                     </div>
                                                     <div class="mb-3">
-                                                        <label>Nama Lengkap</label>
+                                                        <label class="form-label">Nama Lengkap Siswa</label>
                                                         <input type="text" name="nama_siswa" class="form-control" value="<?= htmlspecialchars($row['nama_siswa']); ?>" required>
                                                     </div>
                                                     <div class="mb-3">
-                                                        <label>Kelas</label>
+                                                        <label class="form-label">Kelas</label>
                                                         <input type="text" name="kelas" class="form-control" value="<?= htmlspecialchars($row['kelas']); ?>" required>
                                                     </div>
                                                 </div>
                                                 <div class="modal-footer">
                                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                                                    <button type="submit" name="edit_siswa" class="btn btn-info text-white">Simpan Perubahan</button>
+                                                    <button type="submit" name="edit_siswa" class="btn btn-primary">Simpan Perubahan</button>
                                                 </div>
                                             </form>
                                         </div>
@@ -280,31 +296,33 @@ if ($id_periode_aktif) {
 
                                 <!-- MODAL HAPUS SISWA -->
                                 <div class="modal fade" id="modalHapus<?= $row['id_siswa']; ?>" tabindex="-1">
-                                    <div class="modal-dialog">
+                                    <div class="modal-dialog modal-dialog-centered">
                                         <div class="modal-content">
                                             <form method="POST" action="">
-                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
+                                                <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
+                                                <input type="hidden" name="id_siswa_hapus" value="<?= $row['id_siswa']; ?>">
                                                 <div class="modal-header bg-danger text-white">
-                                                    <h5 class="modal-title">Konfirmasi Penghapusan</h5>
+                                                    <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Hapus Siswa</h5>
                                                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                                 </div>
                                                 <div class="modal-body">
-                                                    <p>Hapus data siswa <b><?= htmlspecialchars($row['nama_siswa']); ?></b> dari periode ini?</p>
-                                                    <input type="hidden" name="id_siswa_hapus" value="<?= $row['id_siswa']; ?>">
+                                                    <p class="mb-1">Apakah Anda yakin ingin menghapus data siswa:</p>
+                                                    <div class="p-3 bg-light rounded-3 border my-2">
+                                                        <div><b>Nama:</b> <?= htmlspecialchars($row['nama_siswa']); ?></div>
+                                                        <div><b>NIS:</b> <?= htmlspecialchars($row['nis']); ?></div>
+                                                        <div><b>Kelas:</b> <?= htmlspecialchars($row['kelas']); ?></div>
+                                                    </div>
+                                                    <small class="text-danger"><i class="fas fa-info-circle me-1"></i> Data akan dinonaktifkan dari sistem pemungutan suara.</small>
                                                 </div>
                                                 <div class="modal-footer">
                                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                                                    <button type="submit" name="hapus_siswa" class="btn btn-danger">Ya, Hapus Data</button>
+                                                    <button type="submit" name="hapus_siswa" class="btn btn-danger">Hapus Data</button>
                                                 </div>
                                             </form>
                                         </div>
                                     </div>
                                 </div>
                             <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="6" class="text-center py-4 text-muted">Belum ada data siswa untuk periode ini.</td>
-                            </tr>
                         <?php endif; ?>
                     </tbody>
                 </table>
@@ -312,33 +330,77 @@ if ($id_periode_aktif) {
         </div>
     </div>
 
+    <!-- MODAL PILIH CETAK PIN / TOKEN (FITUR REKOMENDASI) -->
+    <div class="modal fade" id="modalCetakPin" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form method="GET" action="cetak_pin.php" target="_blank">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title"><i class="fas fa-print me-2"></i> Cetak Kartu Token / PIN</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted small mb-3">
+                            Pilih cakupan pencetakan token suara. Anda dapat mencetak seluruh siswa sekaligus atau memilih per kelas tertentu.
+                        </p>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Pilih Kategori Kelas</label>
+                            <select name="kelas" class="form-select border-primary" id="modalSelectKelas">
+                                <option value="all">-- Cetak Semua Siswa (Dipisah per Halaman Kelas) --</option>
+                                <?php foreach ($daftar_kelas_filter as $kls): ?>
+                                    <option value="<?= htmlspecialchars($kls['kelas']); ?>">
+                                        Khusus Kelas: <?= htmlspecialchars($kls['kelas']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="alert alert-info small mb-0">
+                            <i class="fas fa-lightbulb me-1"></i> <b>Tips:</b> Lembar cetak sudah dilengkapi dengan garis pemotong (gunting), logo sekolah, kelas yang jelas, dan format hemat kertas (A4).
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-external-link-alt me-1"></i> Buka Lembar Cetak
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL TAMBAH SISWA -->
     <div class="modal fade" id="modalTambah" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <form method="POST" action="">
-                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
+                    <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                     <div class="modal-header">
-                        <h5 class="modal-title fw-bold">Tambah Siswa Baru</h5>
+                        <h5 class="modal-title fw-bold"><i class="fas fa-user-plus text-primary me-2"></i> Tambah Siswa Baru</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label">Nomor Induk Siswa (NIS)</label>
-                            <input type="text" name="nis" class="form-control" required autocomplete="off">
+                            <input type="text" name="nis" class="form-control" placeholder="Contoh: 20261001" required autocomplete="off">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Nama Lengkap</label>
-                            <input type="text" name="nama_siswa" class="form-control" required autocomplete="off">
+                            <input type="text" name="nama_siswa" class="form-control" placeholder="Contoh: Ahmad Fauzan" required autocomplete="off">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Kelas</label>
-                            <input type="text" name="kelas" class="form-control" required autocomplete="off">
+                            <input type="text" name="kelas" class="form-control" placeholder="Contoh: XII RPL 1" required autocomplete="off">
+                        </div>
+                        <div class="alert alert-light border small text-muted">
+                            <i class="fas fa-shield-alt text-success me-1"></i> Token/PIN 6 digit unik akan dibuatkan secara otomatis oleh sistem.
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                        <button type="submit" name="tambah_siswa" class="btn btn-primary">Simpan Data</button>
+                        <button type="submit" name="tambah_siswa" class="btn btn-primary">Simpan Data Siswa</button>
                     </div>
                 </form>
             </div>
@@ -347,29 +409,30 @@ if ($id_periode_aktif) {
 
     <!-- MODAL IMPORT CSV -->
     <div class="modal fade" id="modalImport" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <form method="POST" action="" enctype="multipart/form-data">
-                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
+                    <input type="hidden" name="csrf_token" value="<?= generate_csrf_token(); ?>">
                     <div class="modal-header bg-success text-white">
-                        <h5 class="modal-title fw-bold"><i class="fas fa-file-upload me-2"></i> Import Data Siswa</h5>
+                        <h5 class="modal-title fw-bold"><i class="fas fa-file-csv me-2"></i> Import Data Siswa (CSV)</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <div class="alert alert-warning small">
-                            Pastikan file Anda berformat <b>.csv</b>. Kolom berurutan: NIS, Nama Lengkap, Kelas.<br>
-                            <a href="data:text/csv;charset=utf-8,NIS,Nama Lengkap,Kelas%0A1001,Budi Santoso,XI RPL 1%0A1002,Siti Aminah,XI TKJ 2" download="format_import_siswa.csv" class="btn btn-sm btn-outline-success mt-3 fw-bold">
-                                <i class="fas fa-download me-1"></i> Download Format Sample
+                        <div class="alert alert-light border small">
+                            <p class="mb-1"><b>Format Dokumen CSV:</b></p>
+                            Kolom berurutan: <code>NIS, Nama Lengkap, Kelas</code>.<br>
+                            <a href="data:text/csv;charset=utf-8,NIS,Nama Lengkap,Kelas%0A1001,Budi Santoso,XI RPL 1%0A1002,Siti Aminah,XI TKJ 2" download="format_import_siswa.csv" class="btn btn-sm btn-outline-success mt-2 fw-bold">
+                                <i class="fas fa-download me-1"></i> Download Contoh Format CSV
                             </a>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Pilih File CSV</label>
-                            <input type="file" name="file_csv" class="form-control" accept=".csv" required>
+                            <label class="form-label fw-bold">Pilih File CSV</label>
+                            <input type="file" name="file_csv" class="form-control" accept=".csv, .txt" required>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                        <button type="submit" name="import_csv" class="btn btn-success">Mulai Import</button>
+                        <button type="submit" name="import_csv" class="btn btn-success">Mulai Import Data</button>
                     </div>
                 </form>
             </div>
@@ -378,31 +441,30 @@ if ($id_periode_aktif) {
 
     <!-- MODAL CETAK DAFTAR HADIR -->
     <div class="modal fade" id="modalDaftarHadir" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <form method="GET" action="cetak_daftar_hadir.php" target="_blank">
                     <div class="modal-header bg-success text-white">
-                        <h5 class="modal-title fw-bold"><i class="fas fa-print me-2"></i> Cetak Daftar Hadir</h5>
+                        <h5 class="modal-title fw-bold"><i class="fas fa-clipboard-list me-2"></i> Cetak Lembar Daftar Hadir</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label fw-bold">Pilih Kategori Cetak</label>
                             <select name="filter" class="form-select border-success">
-                                <option value="all">Cetak Semua Siswa (Dipisah per Kelas)</option>
+                                <option value="all">Semua Siswa (Dipisah per Halaman Kelas)</option>
                                 
-                                <optgroup label="Cetak Spesifik per Kelas">
+                                <optgroup label="Cetak Khusus per Kelas">
                                     <?php foreach ($daftar_kelas_filter as $kls): ?>
                                         <option value="kelas_<?= htmlspecialchars($kls['kelas']); ?>">Hanya Kelas <?= htmlspecialchars($kls['kelas']); ?></option>
                                     <?php endforeach; ?>
                                 </optgroup>
                                 
-                                <optgroup label="Cetak Khusus Anggota Ekstrakurikuler">
+                                <optgroup label="Cetak Khusus Anggota Eskul">
                                     <?php foreach ($daftar_eskul_filter as $eskul): ?>
                                         <option value="eskul_<?= $eskul['id_eskul']; ?>">Hanya Anggota <?= htmlspecialchars($eskul['nama_eskul']); ?></option>
                                     <?php endforeach; ?>
                                 </optgroup>
-                                
                             </select>
                         </div>
                     </div>
@@ -415,22 +477,47 @@ if ($id_periode_aktif) {
         </div>
     </div>
 
-    <!-- SCRIPT WAJIB DATATABLES -->
+    <!-- SCRIPT WAJIB DATATABLES & SWEETALERT -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="assets/js/scripts.js"></script>
     <script>
         $(document).ready(function() {
-            $('table.table').DataTable({
+            $('#tabelSiswa').DataTable({
                 "language": {
-                    "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json"
+                    "search": "Cari Siswa:",
+                    "lengthMenu": "Tampilkan _MENU_ data",
+                    "info": "Menampilkan _START_ sampai _END_ dari _TOTAL_ siswa",
+                    "infoEmpty": "Tidak ada data tersedia",
+                    "zeroRecords": "Tidak ditemukan data siswa yang cocok",
+                    "paginate": {
+                        "first": "Awal",
+                        "last": "Akhir",
+                        "next": "Lanjut",
+                        "previous": "Sebelum"
+                    }
                 },
                 "pageLength": 10,
                 "ordering": true
             });
         });
+
+        function salinToken(teks) {
+            navigator.clipboard.writeText(teks).then(function() {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: 'Token ' + teks + ' disalin!',
+                    showConfirmButton: false,
+                    timer: 2000
+                });
+            });
+        }
     </script>
-<?php include 'footer.php'; ?>
+    <?php include 'footer.php'; ?>
 </body>
 </html>

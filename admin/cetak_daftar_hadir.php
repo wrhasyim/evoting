@@ -15,17 +15,17 @@ $stmt_periode = $pdo->query("SELECT id_periode, nama_periode FROM periode WHERE 
 $periode_aktif = $stmt_periode->fetch();
 
 if (!$periode_aktif) {
-    die("<h3>Gagal memuat data: Belum ada Tahun Ajaran yang diaktifkan.</h3>");
+    die("<h3 style='text-align:center; margin-top:50px;'>Gagal memuat data: Belum ada Tahun Ajaran yang diaktifkan.</h3>");
 }
 $id_periode_aktif = $periode_aktif['id_periode'];
 $nama_periode_aktif = $periode_aktif['nama_periode'];
 
 // 3. MENERIMA FILTER DARI MODAL
 $filter = isset($_GET['filter']) ? $_GET['filter'] : 'all';
-$judul_laporan = "DAFTAR HADIR PEMILIHAN E-VOTING";
-$sub_judul = "Kategori: Semua Siswa (Publik)";
+$judul_laporan = "DAFTAR HADIR PEMUNGUTAN SUARA E-VOTING";
+$sub_judul = "Kategori: Seluruh Siswa (Umum)";
 $teks_ttd_default = "Panitia Pemilihan";
-$mode_kategori = "kelas"; // Menentukan apakah dikelompokkan per kelas atau digabung (eskul)
+$mode_kategori = "kelas";
 
 $data_siswa = [];
 
@@ -47,7 +47,7 @@ if ($filter === 'all') {
     $data_siswa = $stmt->fetchAll();
     
 } elseif (strpos($filter, 'eskul_') === 0) {
-    $mode_kategori = "eskul"; // Eskul digabung dalam satu kesatuan
+    $mode_kategori = "eskul";
     $id_eskul = substr($filter, 6); 
     
     $stmt_eskul = $pdo->prepare("SELECT nama_eskul FROM eskul WHERE id_eskul = ?");
@@ -75,7 +75,6 @@ if ($mode_kategori === "kelas") {
         $struktur_data[$row['kelas']][] = $row;
     }
 } else {
-    // Jika eskul, cukup simpan dalam satu wadah tunggal tanpa pecah kelas
     $struktur_data['Gabungan'] = $data_siswa;
 }
 ?>
@@ -85,63 +84,171 @@ if ($mode_kategori === "kelas") {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cetak Daftar Hadir - E-Voting</title>
+    <title>Cetak Daftar Hadir - <?= htmlspecialchars($sub_judul); ?></title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=Times+New+Roman&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        body { font-family: 'Times New Roman', Times, serif; background-color: #f4f7fa; padding: 20px; }
-        .print-container { background: white; padding: 0; }
-        .kop-surat { text-align: center; border-bottom: 3px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
-        .kop-surat h3 { margin: 0; font-weight: bold; text-transform: uppercase; font-size: 1.5rem; }
-        .kop-surat p { margin: 5px 0 0 0; font-size: 1.1rem; }
+        body { 
+            font-family: 'Times New Roman', Times, serif; 
+            background-color: #f1f5f9; 
+            color: #000;
+            padding: 0 0 40px 0;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        /* TOOLBAR ATAS SCREEN */
+        .screen-toolbar {
+            position: sticky;
+            top: 0;
+            background: #ffffff;
+            border-bottom: 1px solid #cbd5e1;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+            padding: 12px 24px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .paper-sheet {
+            max-width: 210mm;
+            margin: 25px auto;
+            background: #ffffff;
+            padding: 20mm 20mm;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+            border-radius: 6px;
+        }
+
+        /* KOP SURAT FORMAL */
+        .kop-surat { 
+            border-bottom: 3px double #000; 
+            padding-bottom: 12px; 
+            margin-bottom: 22px; 
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .kop-logo {
+            width: 70px;
+            height: 70px;
+            object-fit: contain;
+        }
+
+        .kop-text {
+            flex: 1;
+            text-align: center;
+        }
+
+        .kop-surat h4 { 
+            margin: 0; 
+            font-weight: bold; 
+            font-size: 1.25rem; 
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .kop-surat h3 { 
+            margin: 2px 0; 
+            font-weight: bold; 
+            font-size: 1.45rem; 
+            text-transform: uppercase;
+        }
+
+        .kop-surat p { 
+            margin: 4px 0 0 0; 
+            font-size: 0.95rem; 
+        }
         
-        .table-hadir th { text-align: center; vertical-align: middle; background-color: #f8f9fa !important; font-weight: bold; border-bottom: 2px solid #000; }
-        .table-hadir td { vertical-align: middle; height: 45px; } 
+        .table-hadir th { 
+            text-align: center; 
+            vertical-align: middle; 
+            background-color: #f1f5f9 !important; 
+            font-weight: bold; 
+            border: 1px solid #000 !important; 
+            padding: 8px 6px;
+            font-size: 0.95rem;
+        }
+
+        .table-hadir td { 
+            vertical-align: middle; 
+            height: 40px; 
+            border: 1px solid #000 !important;
+            padding: 6px 8px;
+            font-size: 0.95rem;
+        } 
         
         .editable { 
-            border: 1px dashed #adb5bd; 
-            padding: 2px 5px; 
+            border: 1px dashed #94a3b8; 
+            padding: 2px 6px; 
             border-radius: 4px; 
             transition: 0.2s; 
             display: inline-block;
-            min-width: 50px;
         }
         .editable:hover, .editable:focus { 
-            background-color: #e9ecef; 
+            background-color: #e0f2fe; 
             outline: none; 
-            border-color: #0d6efd;
-            box-shadow: 0 0 0 2px rgba(13,110,253,.25);
+            border-color: #0284c7;
         }
 
         @media print {
-            body { padding: 0; background-color: white; }
-            .no-print { display: none !important; }
-            .page-break { page-break-after: always; }
-            @page { margin: 15mm; }
-            
+            body { 
+                padding: 0; 
+                background-color: white !important; 
+            }
+            .no-print { 
+                display: none !important; 
+            }
+            .paper-sheet { 
+                box-shadow: none !important; 
+                border-radius: 0 !important;
+                max-width: 100% !important; 
+                width: 100% !important; 
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .page-break { 
+                page-break-after: always !important; 
+                break-after: page !important;
+            }
+            @page { 
+                size: A4 portrait;
+                margin: 15mm; 
+            }
             .editable { 
                 border: none !important; 
                 padding: 0 !important; 
                 background: transparent !important; 
-                box-shadow: none !important;
             }
         }
     </style>
 </head>
 <body>
 
-    <div class="mb-4 no-print text-center">
-        <div class="alert alert-info d-inline-block text-start mb-3 shadow-sm border-info">
-            <i class="fas fa-lightbulb me-2 fs-5"></i> 
-            <b>Tips Cerdas:</b> Teks bergaris putus-putus bisa diklik dan diedit langsung sebelum mencetak.
+    <!-- TOOLBAR LAYAR (NO-PRINT) -->
+    <div class="screen-toolbar no-print">
+        <div class="d-flex align-items-center gap-2">
+            <i class="fas fa-file-alt text-primary fs-5"></i>
+            <span class="fw-bold text-dark">Pratinjau Lembar Daftar Hadir</span>
+            <span class="badge bg-light text-dark border ms-2"><?= htmlspecialchars($sub_judul); ?></span>
         </div>
-        <br>
-        <button onclick="window.print()" class="btn btn-primary btn-lg shadow-sm rounded-pill px-4 fw-bold">
-            <i class="fas fa-print me-2"></i> Cetak ke PDF / Printer
-        </button>
+        <div class="d-flex align-items-center gap-2">
+            <span class="small text-muted me-2"><i class="fas fa-pencil-alt text-warning me-1"></i> Teks bergaris putus-putus dapat diedit langsung sebelum dicetak</span>
+            <button onclick="window.print()" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold shadow-sm">
+                <i class="fas fa-print me-1"></i> Cetak / Simpan PDF
+            </button>
+            <a href="siswa.php" class="btn btn-light btn-sm rounded-pill px-3 border">
+                Kembali
+            </a>
+        </div>
     </div>
 
-    <div class="print-container container-fluid px-0">
+    <!-- AREA KERTAS DOKUMEN -->
+    <div class="paper-sheet">
         <?php if (count($data_siswa) > 0): ?>
             <?php 
             $total_bagian = count($struktur_data);
@@ -154,52 +261,61 @@ if ($mode_kategori === "kelas") {
                 
                 <div class="<?= ($counter < $total_bagian && $mode_kategori === 'kelas') ? 'page-break' : ''; ?>">
                     
+                    <!-- KOP SURAT RESMI -->
                     <div class="kop-surat">
-                        <h3 class="editable" contenteditable="true"><?= $judul_laporan; ?></h3><br>
-                        <b class="editable fs-5" contenteditable="true">SMK TARUNA KARYA MANDIRI</b>
-                        <p style="font-size: 0.95rem;">
-                            <span class="editable" contenteditable="true">Tahun Ajaran: <?= htmlspecialchars($nama_periode_aktif); ?></span> | 
-                            <span class="editable" contenteditable="true"><?= htmlspecialchars($sub_judul); ?></span>
-                        </p>
+                        <?php if (file_exists('../uploads/logo_utama.png')): ?>
+                            <img src="../uploads/logo_utama.png" alt="Logo" class="kop-logo">
+                        <?php endif; ?>
+                        <div class="kop-text">
+                            <h4 class="editable" contenteditable="true"><?= $judul_laporan; ?></h4>
+                            <h3 class="editable" contenteditable="true">SMK TARUNA KARYA MANDIRI</h3>
+                            <p>
+                                <span class="editable" contenteditable="true">Tahun Ajaran: <?= htmlspecialchars($nama_periode_aktif); ?></span> &bull; 
+                                <span class="editable" contenteditable="true"><?= htmlspecialchars($sub_judul); ?></span>
+                            </p>
+                        </div>
                     </div>
 
                     <?php if ($mode_kategori === "kelas"): ?>
-                        <h5 class="fw-bold mb-3 px-2">Kelas: <?= htmlspecialchars($label_bagian); ?></h5>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold m-0">Kelas: <span class="editable" contenteditable="true"><?= htmlspecialchars($label_bagian); ?></span></h5>
+                            <span style="font-size: 0.95rem;">Jumlah Siswa: <b><?= count($daftar_anggota); ?></b></span>
+                        </div>
                     <?php endif; ?>
                     
-                    <!-- Tabel Absensi -->
-                    <table class="table table-bordered table-hadir align-middle border-dark">
+                    <!-- TABEL ABSENSI -->
+                    <table class="table table-bordered table-hadir align-middle w-100">
                         <thead>
                             <tr>
-                                <th width="5%">No</th>
-                                <th width="15%">NIS</th>
-                                <th width="35%">Nama Lengkap Siswa</th>
+                                <th style="width: 5%;">No</th>
+                                <th style="width: 18%;">NIS</th>
+                                <th>Nama Lengkap Siswa</th>
                                 <?php if ($mode_kategori === "eskul"): ?>
-                                    <th width="15%">Kelas</th>
-                                    <th colspan="2" width="30%">Tanda Tangan</th>
+                                    <th style="width: 15%;">Kelas</th>
+                                    <th colspan="2" style="width: 32%;">Tanda Tangan / Verifikasi</th>
                                 <?php else: ?>
-                                    <th colspan="2" width="45%">Tanda Tangan</th>
+                                    <th colspan="2" style="width: 36%;">Tanda Tangan / Verifikasi</th>
                                 <?php endif; ?>
                             </tr>
                         </thead>
                         <tbody>
                             <?php $no = 1; foreach ($daftar_anggota as $row): ?>
                                 <tr>
-                                    <td class="text-center"><?= $no; ?></td>
-                                    <td class="text-center fw-bold"><?= htmlspecialchars($row['nis']); ?></td>
-                                    <td class="px-3"><?= htmlspecialchars($row['nama_siswa']); ?></td>
+                                    <td class="text-center fw-bold"><?= $no; ?></td>
+                                    <td class="text-center font-monospace"><?= htmlspecialchars($row['nis']); ?></td>
+                                    <td><?= htmlspecialchars($row['nama_siswa']); ?></td>
                                     
                                     <?php if ($mode_kategori === "eskul"): ?>
-                                        <td class="text-center"><span class="badge bg-secondary"><?= htmlspecialchars($row['kelas']); ?></span></td>
+                                        <td class="text-center"><?= htmlspecialchars($row['kelas']); ?></td>
                                     <?php endif; ?>
                                     
                                     <!-- Logika Tanda Tangan Zig-Zag -->
                                     <?php if ($no % 2 != 0): ?>
-                                        <td class="border-end-0 px-3" width="15%"><?= $no; ?>. </td>
-                                        <td class="border-start-0" width="15%"></td>
+                                        <td class="border-end-0 px-2" style="width: 18%;"><?= $no; ?>. </td>
+                                        <td class="border-start-0" style="width: 18%;"></td>
                                     <?php else: ?>
-                                        <td class="border-end-0" width="15%"></td>
-                                        <td class="border-start-0 px-3" width="15%"><?= $no; ?>. </td>
+                                        <td class="border-end-0" style="width: 18%;"></td>
+                                        <td class="border-start-0 px-2" style="width: 18%;"><?= $no; ?>. </td>
                                     <?php endif; ?>
                                 </tr>
                             <?php $no++; endforeach; ?>
@@ -207,14 +323,19 @@ if ($mode_kategori === "kelas") {
                     </table>
                     
                     <!-- Area Tanda Tangan Bawah -->
-                    <div class="row mt-4 mb-5 pb-4">
-                        <div class="col-7"></div>
+                    <div class="row mt-4 mb-5 pt-2" style="page-break-inside: avoid; break-inside: avoid;">
+                        <div class="col-7">
+                            <small style="font-size: 0.82rem; color: #555;">
+                                Dicetak pada: <?= date("d/m/Y H:i"); ?> WIB &bull; Sistem E-Voting
+                            </small>
+                        </div>
                         <div class="col-5 text-center">
-                            <div class="editable" contenteditable="true" style="display: block; margin-bottom: 70px;">
+                            <div class="editable" contenteditable="true" style="margin-bottom: 65px; display: inline-block;">
                                 <?= htmlspecialchars($tampil_teks_ttd); ?>,
                             </div>
-                            <div class="editable fw-bold text-decoration-underline" contenteditable="true" style="display: block; width: 100%;">
-                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                            <br>
+                            <div class="editable fw-bold" contenteditable="true" style="display: inline-block; min-width: 180px; border-bottom: 1px solid #000;">
+                                ( .................................................... )
                             </div>
                         </div>
                     </div>
@@ -222,9 +343,9 @@ if ($mode_kategori === "kelas") {
                 </div>
             <?php endforeach; ?>
         <?php else: ?>
-            <div class="alert alert-warning text-center mt-5 border border-warning">
+            <div class="alert alert-warning text-center mt-5">
                 <h4><i class="fas fa-exclamation-circle me-2"></i>Tidak ada data siswa</h4>
-                <p>Belum ada siswa yang terdaftar untuk kategori ini.</p>
+                <p>Belum ada siswa yang terdaftar untuk kategori yang dipilih.</p>
             </div>
         <?php endif; ?>
     </div>
