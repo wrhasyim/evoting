@@ -246,8 +246,11 @@ $persentase_pemilih = ($total_siswa > 0) ? round(($siswa_sudah / $total_siswa) *
                     </div>
                     <div>
                         <?php if ($siswa_bodong > 0): ?>
+                            <a href="cetak_siswa_bodong.php" target="_blank" class="btn btn-danger w-100 btn-pill mb-2">
+                                <i class="fas fa-print me-1"></i> Cetak Dokumen Resmi (A4)
+                            </a>
                             <button type="button" class="btn btn-outline-danger w-100 btn-pill" data-bs-toggle="modal" data-bs-target="#modalSiswaBodong">
-                                <i class="fas fa-list me-1"></i> Lihat & Ekspor Rekapan
+                                <i class="fas fa-table me-1"></i> Lihat Data & Ekspor
                             </button>
                         <?php else: ?>
                             <div class="text-success small text-center fw-semibold py-2">
@@ -314,6 +317,15 @@ $persentase_pemilih = ($total_siswa > 0) ? round(($siswa_sudah / $total_siswa) *
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
+                    <div class="d-flex justify-content-between align-items-center p-3 mb-3 bg-light rounded-3 border">
+                        <div>
+                            <div class="fw-bold text-dark">Format Cetak Standar Kesiswaan</div>
+                            <small class="text-muted">Gunakan lembar cetak A4 resmi lengkap dengan kop sekolah, nomor, dan kolom penugasan.</small>
+                        </div>
+                        <a href="cetak_siswa_bodong.php" target="_blank" class="btn btn-danger btn-sm rounded-pill px-3 fw-bold text-nowrap">
+                            <i class="fas fa-print me-1"></i> Buka Format Resmi
+                        </a>
+                    </div>
                     <table id="tabelBodong" class="table table-hover align-middle w-100">
                         <thead>
                             <tr>
@@ -392,9 +404,29 @@ $persentase_pemilih = ($total_siswa > 0) ? round(($siswa_sudah / $total_siswa) *
                     },
                     {
                         extend: 'print',
-                        className: 'btn btn-secondary btn-sm btn-pill',
-                        text: '<i class="fas fa-print me-1"></i> Cetak',
-                        title: 'REKAPITULASI SISWA TANPA EKSTRAKURIKULER'
+                        className: 'btn btn-danger btn-sm btn-pill',
+                        text: '<i class="fas fa-print me-1"></i> Cetak Tabel',
+                        title: '',
+                        customize: function (win) {
+                            $(win.document.body).css('font-family', 'Arial, sans-serif').css('padding', '20px');
+                            $(win.document.body).prepend(
+                                '<div style="text-align:center; margin-bottom:20px; border-bottom: 2px solid #000; padding-bottom: 10px;">' +
+                                '<h3 style="margin:0; font-weight:bold; text-transform:uppercase;">SMK TARUNA KARYA MANDIRI</h3>' +
+                                '<h4 style="margin:4px 0; font-size:16px;">REKAPITULASI SISWA BELUM MEMILIKI EKSTRAKURIKULER</h4>' +
+                                '<p style="margin:0; font-size:12px; color:#555;">Dokumen Internal Penugasan Organisasi Siswa</p>' +
+                                '</div>'
+                            );
+                            $(win.document.body).find('table')
+                                .css('width', '100%')
+                                .css('border-collapse', 'collapse')
+                                .css('margin-top', '15px');
+                            $(win.document.body).find('th, td')
+                                .css('border', '1px solid #000')
+                                .css('padding', '6px 8px');
+                            $(win.document.body).find('th')
+                                .css('background-color', '#f1f5f9')
+                                .css('text-align', 'center');
+                        }
                     }
                 ]
             });

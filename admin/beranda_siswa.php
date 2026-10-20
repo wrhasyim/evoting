@@ -22,7 +22,7 @@ if (!$periode_aktif) {
 $id_periode = $periode_aktif['id_periode'];
 
 // 3. MENDAPATKAN DATA SISWA DI PERIODE AKTIF
-$stmt_siswa = $pdo->prepare("SELECT id_siswa, nama_siswa, kelas, status_pilih FROM siswa WHERE nis = ? AND id_periode = ? AND status_aktif = 1");
+$stmt_siswa = $pdo->prepare("SELECT id_siswa, nis, nama_siswa, kelas, status_pilih FROM siswa WHERE nis = ? AND id_periode = ? AND status_aktif = 1");
 $stmt_siswa->execute([$nis, $id_periode]);
 $siswa = $stmt_siswa->fetch();
 
@@ -281,10 +281,18 @@ if (isset($_POST['submit_vote_hidden'])) {
 
         <?php if (count($daftar_hak_pilih) == 0): ?>
             <div class="bg-white p-5 rounded-4 shadow-sm text-center mt-4 border">
-                <i class="fas fa-vote-yea text-success" style="font-size: 4rem; margin-bottom: 15px;"></i>
-                <h4 class="fw-bold text-dark">Tidak Ada Pemilihan yang Terbuka</h4>
-                <p class="text-muted">Saat ini belum ada bilik pemilihan yang dibuka oleh panitia untuk Anda ikuti.</p>
-                <a href="../logout.php" class="btn btn-primary rounded-pill px-4 mt-2">Keluar Sistem</a>
+                <i class="fas fa-clipboard-check text-primary" style="font-size: 3.5rem; margin-bottom: 15px;"></i>
+                <h4 class="fw-bold text-dark">Akun Anda Terverifikasi</h4>
+                <p class="text-muted max-w-md mx-auto" style="max-width: 500px;">
+                    Halo <b><?= htmlspecialchars($siswa['nama_siswa']); ?></b>, akun pemilih Anda telah aktif dan terdata dengan sah di sistem. Namun, saat ini panitia belum membuka bilik pemilihan (ekstrakurikuler/OSIS).
+                </p>
+                <div class="badge badge-soft-warning p-2 px-3 mb-3">
+                    <i class="fas fa-clock me-1"></i> Menunggu Panitia Membuka Sesi Pemilihan
+                </div>
+                <br>
+                <a href="../logout.php" class="btn btn-outline-danger rounded-pill px-4 mt-2">
+                    <i class="fas fa-sign-out-alt me-1"></i> Keluar Sementara
+                </a>
             </div>
         <?php else: ?>
             

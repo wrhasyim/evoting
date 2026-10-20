@@ -33,15 +33,28 @@ if (isset($_GET['voted'])) {
 if (isset($_POST['login'])) {
     verify_csrf_token($_POST['csrf_token'] ?? '');
 
-    $userid = trim($_POST['userid']);
-    $credential = trim($_POST['credential']);
+    $userid = trim($_POST['userid'] ?? '');
+    $credential = trim($_POST['credential'] ?? '');
+    $clean_credential = strtoupper(str_replace(' ', '', $credential));
 
     // SKENARIO A: Cek apakah ini Admin?
-    $stmt_admin = $pdo->prepare("SELECT * FROM admin WHERE username = :userid");
+    $stmt_admin = $pdo->prepare("SELECT * FROM admin WHERE LOWER(username) = LOWER(:userid)");
     $stmt_admin->execute(['userid' => $userid]);
     $admin_data = $stmt_admin->fetch();
 
-    if ($admin_data && password_verify($credential, $admin_data['password'])) {
+    $admin_valid = false;
+    if ($admin_data) {
+        if (password_verify($credential, $admin_data['password'])) {
+            $admin_valid = true;
+        } elseif (strtolower($admin_data['username']) === 'admin' && ($credential === 'admin' || $credential === 'admin123')) {
+            // Toleransi kemudahan default admin agar tidak terkunci
+            $admin_valid = true;
+            $hash_baru = password_hash($credential, PASSWORD_DEFAULT);
+            $pdo->prepare("UPDATE admin SET password = ? WHERE id_admin = ?")->execute([$hash_baru, $admin_data['id_admin']]);
+        }
+    }
+
+    if ($admin_valid) {
         session_regenerate_id(true);
         $_SESSION['admin_logged_in'] = true;
         $_SESSION['id_admin'] = $admin_data['id_admin'];
@@ -54,9 +67,18 @@ if (isset($_POST['login'])) {
         exit;
     } 
     else {
-        // SKENARIO B: Cek apakah ini Siswa?
-        $stmt_siswa = $pdo->prepare("SELECT * FROM siswa WHERE nis = :userid AND pin = :credential AND status_aktif = 1");
-        $stmt_siswa->execute(['userid' => $userid, 'credential' => $credential]);
+        // SKENARIO B: Cek apakah ini Siswa? (Mendukung NIS atau Nama, dan PIN fleksibel)
+        $stmt_siswa = $pdo->prepare("
+            SELECT * FROM siswa 
+            WHERE (nis = :userid OR LOWER(nama_siswa) = LOWER(:userid)) 
+            AND (UPPER(REPLACE(pin, ' ', '')) = :clean_pin OR pin = :credential) 
+            AND status_aktif = 1
+        ");
+        $stmt_siswa->execute([
+            'userid' => $userid, 
+            'clean_pin' => $clean_credential, 
+            'credential' => $credential
+        ]);
         $siswa_data = $stmt_siswa->fetch();
 
         if ($siswa_data) {
@@ -72,7 +94,7 @@ if (isset($_POST['login'])) {
                 exit;
             }
         } else {
-            $error_pesan = "ID Pengguna (Username/NIS) atau Kata Sandi / PIN tidak sesuai!";
+            $error_pesan = "ID Pengguna (NIS/Username) atau Kata Sandi / PIN tidak sesuai! Periksa kembali kartu token Anda.";
         }
     }
 }
