@@ -20,8 +20,9 @@ if (!$periode_aktif) {
 $id_periode_aktif = $periode_aktif['id_periode'];
 $nama_periode_aktif = $periode_aktif['nama_periode'];
 
-// 3. MENERIMA FILTER DARI MODAL
+// 3. MENERIMA FILTER DARI MODAL & UKURAN KERTAS
 $filter = isset($_GET['filter']) ? $_GET['filter'] : 'all';
+$ukuran_kertas = isset($_GET['kertas']) && strtoupper($_GET['kertas']) === 'F4' ? 'F4' : 'A4';
 $judul_laporan = "DAFTAR HADIR PEMUNGUTAN SUARA E-VOTING";
 $sub_judul = "Kategori: Seluruh Siswa (Umum)";
 $teks_ttd_default = "Panitia Pemilihan";
@@ -84,7 +85,7 @@ if ($mode_kategori === "kelas") {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cetak Daftar Hadir - <?= htmlspecialchars($sub_judul); ?></title>
+    <title>Cetak Daftar Hadir (<?= $ukuran_kertas; ?>) - <?= htmlspecialchars($sub_judul); ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=Times+New+Roman&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -115,12 +116,14 @@ if ($mode_kategori === "kelas") {
         }
 
         .paper-sheet {
-            max-width: 210mm;
+            max-width: <?= $ukuran_kertas === 'F4' ? '215mm' : '210mm'; ?>;
+            min-height: <?= $ukuran_kertas === 'F4' ? '330mm' : '297mm'; ?>;
             margin: 25px auto;
             background: #ffffff;
-            padding: 20mm 20mm;
+            padding: 16mm 18mm;
             box-shadow: 0 10px 25px rgba(0,0,0,0.06);
             border-radius: 6px;
+            transition: max-width 0.2s ease;
         }
 
         /* KOP SURAT FORMAL */
@@ -216,8 +219,8 @@ if ($mode_kategori === "kelas") {
                 break-after: page !important;
             }
             @page { 
-                size: A4 portrait;
-                margin: 15mm; 
+                size: <?= $ukuran_kertas === 'F4' ? '215mm 330mm' : 'A4 portrait'; ?>;
+                margin: 12mm 15mm; 
             }
             .editable { 
                 border: none !important; 
@@ -236,10 +239,19 @@ if ($mode_kategori === "kelas") {
             <span class="fw-bold text-dark">Pratinjau Lembar Daftar Hadir</span>
             <span class="badge bg-light text-dark border ms-2"><?= htmlspecialchars($sub_judul); ?></span>
         </div>
-        <div class="d-flex align-items-center gap-2">
-            <span class="small text-muted me-2"><i class="fas fa-pencil-alt text-warning me-1"></i> Teks bergaris putus-putus dapat diedit langsung sebelum dicetak</span>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <form method="GET" action="" style="display: inline-flex; align-items: center; gap: 6px; margin: 0;">
+                <input type="hidden" name="filter" value="<?= htmlspecialchars($filter); ?>">
+                <label for="selectKertas" class="small fw-bold text-secondary mb-0">
+                    <i class="fas fa-file-alt text-success me-1"></i>Kertas:
+                </label>
+                <select name="kertas" id="selectKertas" class="form-select form-select-sm" onchange="this.form.submit()" style="font-weight: 700; width: auto;">
+                    <option value="A4" <?= $ukuran_kertas === 'A4' ? 'selected' : ''; ?>>A4 (210 &times; 297 mm)</option>
+                    <option value="F4" <?= $ukuran_kertas === 'F4' ? 'selected' : ''; ?>>F4 / Folio (215 &times; 330 mm)</option>
+                </select>
+            </form>
             <button onclick="window.print()" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold shadow-sm">
-                <i class="fas fa-print me-1"></i> Cetak / Simpan PDF
+                <i class="fas fa-print me-1"></i> Cetak Dokumen (<?= $ukuran_kertas; ?>)
             </button>
             <a href="siswa.php" class="btn btn-light btn-sm rounded-pill px-3 border">
                 Kembali

@@ -28,8 +28,9 @@ $stmt_kelas = $pdo->prepare("
 $stmt_kelas->execute();
 $daftar_kelas = $stmt_kelas->fetchAll(PDO::FETCH_COLUMN);
 
-// 3. Tangani Filter Kelas
+// 3. Tangani Filter Kelas & Ukuran Kertas
 $filter_kelas = isset($_GET['kelas']) ? trim($_GET['kelas']) : 'all';
+$ukuran_kertas = isset($_GET['kertas']) && strtoupper($_GET['kertas']) === 'F4' ? 'F4' : 'A4';
 
 // 4. Query Data Siswa Tanpa Eskul
 $params = [];
@@ -72,7 +73,7 @@ foreach ($data_siswa_bodong as $siswa) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cetak Rekapitulasi Siswa Tanpa Eskul - E-Voting</title>
+    <title>Cetak Rekapitulasi Siswa Tanpa Eskul (<?= $ukuran_kertas; ?>) - E-Voting</title>
     <!-- Google Fonts & Bootstrap 5 -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Times+New+Roman&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -106,12 +107,14 @@ foreach ($data_siswa_bodong as $siswa) {
         }
 
         .paper-sheet {
-            max-width: 210mm;
+            max-width: <?= $ukuran_kertas === 'F4' ? '215mm' : '210mm'; ?>;
+            min-height: <?= $ukuran_kertas === 'F4' ? '330mm' : '297mm'; ?>;
             margin: 25px auto;
             background: #ffffff;
-            padding: 18mm 18mm;
+            padding: 16mm 18mm;
             box-shadow: 0 10px 30px rgba(0,0,0,0.08);
             border-radius: 8px;
+            transition: max-width 0.2s ease;
         }
 
         /* KOP SURAT FORMAL */
@@ -234,8 +237,8 @@ foreach ($data_siswa_bodong as $siswa) {
                 break-after: page !important;
             }
             @page { 
-                size: A4 portrait;
-                margin: 12mm; 
+                size: <?= $ukuran_kertas === 'F4' ? '215mm 330mm' : 'A4 portrait'; ?>;
+                margin: 10mm 12mm; 
             }
             .editable { 
                 border: none !important; 
@@ -267,21 +270,35 @@ foreach ($data_siswa_bodong as $siswa) {
         </div>
 
         <div class="d-flex align-items-center gap-2 flex-wrap">
-            <!-- Filter Kelas -->
-            <form method="GET" action="" style="display: flex; align-items: center; gap: 8px; margin: 0;">
-                <label for="filterKelas" style="font-size: 0.82rem; font-weight: 700; color: #475569;">Pilih Kelas:</label>
-                <select name="kelas" id="filterKelas" class="form-select form-select-sm" onchange="this.form.submit()" style="font-weight: 600;">
-                    <option value="all" <?= $filter_kelas == 'all' ? 'selected' : ''; ?>>-- Cetak Semua Kelas --</option>
-                    <?php foreach ($daftar_kelas as $k): ?>
-                        <option value="<?= htmlspecialchars($k); ?>" <?= $filter_kelas == $k ? 'selected' : ''; ?>>
-                            Kelas: <?= htmlspecialchars($k); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+            <!-- Filter Kertas & Kelas -->
+            <form method="GET" action="" style="display: flex; align-items: center; gap: 8px; margin: 0; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 4px;">
+                    <label for="selectKertas" style="font-size: 0.82rem; font-weight: 700; color: #475569;">
+                        <i class="fas fa-file-alt text-danger"></i> Kertas:
+                    </label>
+                    <select name="kertas" id="selectKertas" class="form-select form-select-sm" onchange="this.form.submit()" style="font-weight: 600; width: auto;">
+                        <option value="A4" <?= $ukuran_kertas === 'A4' ? 'selected' : ''; ?>>A4 (210 &times; 297 mm)</option>
+                        <option value="F4" <?= $ukuran_kertas === 'F4' ? 'selected' : ''; ?>>F4 / Folio (215 &times; 330 mm)</option>
+                    </select>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 4px;">
+                    <label for="filterKelas" style="font-size: 0.82rem; font-weight: 700; color: #475569;">
+                        <i class="fas fa-filter text-danger"></i> Kelas:
+                    </label>
+                    <select name="kelas" id="filterKelas" class="form-select form-select-sm" onchange="this.form.submit()" style="font-weight: 600;">
+                        <option value="all" <?= $filter_kelas == 'all' ? 'selected' : ''; ?>>-- Cetak Semua Kelas --</option>
+                        <?php foreach ($daftar_kelas as $k): ?>
+                            <option value="<?= htmlspecialchars($k); ?>" <?= $filter_kelas == $k ? 'selected' : ''; ?>>
+                                Kelas: <?= htmlspecialchars($k); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
             </form>
 
             <button onclick="window.print()" class="btn btn-danger btn-sm rounded-pill px-4 fw-bold shadow-sm">
-                <i class="fas fa-print me-1"></i> Cetak / Simpan PDF
+                <i class="fas fa-print me-1"></i> Cetak Dokumen (<?= $ukuran_kertas; ?>)
             </button>
             <a href="index.php" class="btn btn-light btn-sm rounded-pill px-3 border">
                 <i class="fas fa-arrow-left me-1"></i> Kembali

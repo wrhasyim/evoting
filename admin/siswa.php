@@ -356,8 +356,34 @@ if ($id_periode_aktif) {
                             </select>
                         </div>
 
+                        <div class="mb-3">
+                            <label class="form-label fw-bold"><i class="fas fa-file-alt me-1 text-primary"></i> Pilih Ukuran Kertas</label>
+                            <select name="kertas" class="form-select border-primary" id="modalSelectKertasPin">
+                                <option value="F4" selected>F4 / Folio (215 &times; 330 mm) - HVS Panjang</option>
+                                <option value="A4">A4 (210 &times; 297 mm) - Standar</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold"><i class="fas fa-th me-1 text-primary"></i> Kapasitas Kartu per Lembar</label>
+                            <select name="kapasitas" class="form-select border-primary">
+                                <option value="8" selected>8 Kartu (2 Kolom &times; 4 Baris) - Sangat Proper & Aman Margin Default (Rekomendasi)</option>
+                                <option value="10">10 Kartu (2 Kolom &times; 5 Baris) - Padat 5 Baris</option>
+                                <option value="12">12 Kartu (3 Kolom &times; 4 Baris) - Standar 3 Kolom</option>
+                            </select>
+                            <div class="form-text text-muted">Format 8 kartu berukuran besar, proper, dan terjamin 100% pas satu lembar tanpa terpotong margin default printer.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold"><i class="fas fa-layer-group me-1 text-primary"></i> Susunan Lembar</label>
+                            <select name="mode" class="form-select border-primary">
+                                <option value="kelas" selected>Pisah per Kelas (Tiap kelas mulai di lembar baru)</option>
+                                <option value="sambung">Sambung Terus (Super Hemat Kertas, tanpa lembar sisa)</option>
+                            </select>
+                        </div>
+
                         <div class="alert alert-info small mb-0">
-                            <i class="fas fa-lightbulb me-1"></i> <b>Tips:</b> Lembar cetak sudah dilengkapi dengan garis pemotong (gunting), logo sekolah, kelas yang jelas, dan format hemat kertas (A4).
+                            <i class="fas fa-check-circle me-1"></i> <b>Format Pas Penuh (WYSIWYG):</b> Kartu token berukuran besar dan mengisi lembar dari atas sampai batas bawah tanpa ada sisa ruang kosong. Header kelas otomatis disembunyikan saat dicetak agar rapi untuk mesin potong.
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -466,6 +492,15 @@ if ($id_periode_aktif) {
                                     <?php endforeach; ?>
                                 </optgroup>
                             </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold"><i class="fas fa-file-alt me-1 text-success"></i> Pilih Ukuran Kertas</label>
+                            <select name="kertas" class="form-select border-success" id="modalSelectKertasHadir">
+                                <option value="A4" selected>A4 (210 &times; 297 mm) - Standar</option>
+                                <option value="F4">F4 / Folio (215 &times; 330 mm) - HVS Panjang</option>
+                            </select>
+                            <div class="form-text text-muted">Sesuaikan dengan ukuran kertas yang Anda gunakan pada printer.</div>
                         </div>
                     </div>
                     <div class="modal-footer">
