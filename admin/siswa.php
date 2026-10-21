@@ -367,13 +367,15 @@ if ($id_periode_aktif) {
                         <div class="mb-3">
                             <label class="form-label fw-bold"><i class="fas fa-th me-1 text-primary"></i> Kapasitas Kartu per Lembar</label>
                             <select name="kapasitas" class="form-select border-primary">
-                                <option value="15" selected>15 Kartu (3 Kolom &times; 5 Baris) - Hemat Kertas & Rapi (Rekomendasi)</option>
-                                <option value="18">18 Kartu (3 Kolom &times; 6 Baris) - Super Hemat Kertas</option>
-                                <option value="20">20 Kartu (4 Kolom &times; 5 Baris) - Maksimal 20 Kartu/Lembar</option>
-                                <option value="12">12 Kartu (3 Kolom &times; 4 Baris) - Format Sedang</option>
+                                <option value="27" selected>27 Kartu (3 Kolom &times; 9 Baris) - Penuh Selembar F4 (Ekstrem Hemat Kertas)</option>
+                                <option value="24">24 Kartu (3 Kolom &times; 8 Baris) - Penuh Selembar (8 Baris)</option>
+                                <option value="21">21 Kartu (3 Kolom &times; 7 Baris) - Format 7 Baris</option>
+                                <option value="18">18 Kartu (3 Kolom &times; 6 Baris) - Format 6 Baris</option>
+                                <option value="15">15 Kartu (3 Kolom &times; 5 Baris) - Format 5 Baris (Lega)</option>
+                                <option value="12">12 Kartu (3 Kolom &times; 4 Baris) - Format 4 Baris</option>
                                 <option value="8">8 Kartu (2 Kolom &times; 4 Baris) - Format Besar</option>
                             </select>
-                            <div class="form-text text-muted">Didesain kompak dan pas dalam batas printable area printer, dijamin tidak akan terpotong pada Margin Default.</div>
+                            <div class="form-text text-muted">Format 27 kartu (9 baris) atau 24 kartu (8 baris) mengisi lembar dari atas sampai batas bawah tanpa ada sisa ruang terbuang.</div>
                         </div>
 
                         <div class="mb-3">

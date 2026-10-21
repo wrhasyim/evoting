@@ -29,53 +29,98 @@ $filter_kelas = isset($_GET['kelas']) ? trim($_GET['kelas']) : 'all';
 $ukuran_kertas = isset($_GET['kertas']) && strtoupper($_GET['kertas']) === 'F4' ? 'F4' : 'A4';
 $mode_lembar = isset($_GET['mode']) && $_GET['mode'] === 'sambung' ? 'sambung' : 'kelas';
 
-// Pilihan Kapasitas Kartu per Lembar (Default Optimal: 15 Kartu per lembar)
-// Opsi hemat kertas: 15, 18, 20 kartu (atau opsi lega: 12, 8)
-$kapasitas_pilihan = isset($_GET['kapasitas']) ? (int)$_GET['kapasitas'] : 15;
-if (!in_array($kapasitas_pilihan, [8, 12, 15, 18, 20])) {
-    $kapasitas_pilihan = 15;
+// Pilihan Kapasitas Kartu per Lembar
+// Default optimal: F4 = 27 Kartu (3 Kolom x 9 Baris: 5 baris + 4 baris ekstra kebawah memenuhi lembar F4)
+// A4 = 24 Kartu (3 Kolom x 8 Baris)
+$default_kapasitas = ($ukuran_kertas === 'F4') ? 27 : 24;
+$kapasitas_pilihan = isset($_GET['kapasitas']) ? (int)$_GET['kapasitas'] : $default_kapasitas;
+if (!in_array($kapasitas_pilihan, [8, 12, 15, 18, 21, 24, 27])) {
+    $kapasitas_pilihan = $default_kapasitas;
 }
 $cards_per_page = $kapasitas_pilihan;
 
-// Perhitungan Geometri Fisik Kertas & Kartu
-// KUNCI UTAMA: Total tinggi grid dijaga pada rentang aman 230-238mm.
-// Hal ini menjamin 100% TIDAK PERNAH TERPOTONG atau terdorong ke halaman baru pada Epson/Canon/HP,
-// bahkan saat pengguna memilih pilihan "Margin: Default" di browser!
-if ($cards_per_page === 15) {
-    // 3 Kolom x 5 Baris (Hemat Kertas & Sangat Rapi - Rekomendasi Utama)
+// Perhitungan Geometri Fisik Kertas & Kartu (Maksimal Mengisi Sampai Bawah F4 & A4)
+if ($cards_per_page === 27) {
+    // 3 Kolom x 9 Baris (5 Baris + 4 Baris Ekstra Kebawah - Penuh Selembar F4!)
     $grid_cols = 3;
-    $grid_rows = 5;
-    $card_height_mm = 45;
+    $grid_rows = 9;
     $grid_gap_x_mm = 3;
-    $grid_gap_y_mm = 2.5;
-} elseif ($cards_per_page === 18) {
-    // 3 Kolom x 6 Baris (Super Hemat Kertas)
+    $grid_gap_y_mm = 1.2;
+    if ($ukuran_kertas === 'F4') {
+        // F4: 9 baris x 33.5mm + 8 x 1.2mm = 311.1mm (Pas Penuh Lembar F4 330mm!)
+        $card_height_mm = 33.5;
+    } else {
+        // A4: 9 baris x 29.5mm + 8 x 1.2mm = 275.1mm (Pas Penuh Lembar A4 297mm!)
+        $card_height_mm = 29.5;
+    }
+} elseif ($cards_per_page === 24) {
+    // 3 Kolom x 8 Baris
     $grid_cols = 3;
-    $grid_rows = 6;
-    $card_height_mm = 38;
+    $grid_rows = 8;
+    $grid_gap_x_mm = 3;
+    $grid_gap_y_mm = 1.5;
+    if ($ukuran_kertas === 'F4') {
+        // F4: 8 baris x 37.5mm + 7 x 1.5mm = 310.5mm (Pas Penuh Lembar F4!)
+        $card_height_mm = 37.5;
+    } else {
+        // A4: 8 baris x 33.5mm + 7 x 1.5mm = 278.5mm (Pas Penuh Lembar A4!)
+        $card_height_mm = 33.5;
+    }
+} elseif ($cards_per_page === 21) {
+    // 3 Kolom x 7 Baris
+    $grid_cols = 3;
+    $grid_rows = 7;
     $grid_gap_x_mm = 3;
     $grid_gap_y_mm = 2;
-} elseif ($cards_per_page === 20) {
-    // 4 Kolom x 5 Baris (Maksimal 20 Kartu per Lembar)
-    $grid_cols = 4;
-    $grid_rows = 5;
-    $card_height_mm = 45;
-    $grid_gap_x_mm = 2.5;
+    if ($ukuran_kertas === 'F4') {
+        $card_height_mm = 42.5;
+    } else {
+        $card_height_mm = 38;
+    }
+} elseif ($cards_per_page === 18) {
+    // 3 Kolom x 6 Baris
+    $grid_cols = 3;
+    $grid_rows = 6;
+    $grid_gap_x_mm = 3;
     $grid_gap_y_mm = 2.5;
+    if ($ukuran_kertas === 'F4') {
+        $card_height_mm = 49;
+    } else {
+        $card_height_mm = 44;
+    }
+} elseif ($cards_per_page === 15) {
+    // 3 Kolom x 5 Baris
+    $grid_cols = 3;
+    $grid_rows = 5;
+    $grid_gap_x_mm = 3;
+    $grid_gap_y_mm = 3;
+    if ($ukuran_kertas === 'F4') {
+        $card_height_mm = 58;
+    } else {
+        $card_height_mm = 52;
+    }
 } elseif ($cards_per_page === 12) {
-    // 3 Kolom x 4 Baris (Lebih Lega)
+    // 3 Kolom x 4 Baris
     $grid_cols = 3;
     $grid_rows = 4;
-    $card_height_mm = 56;
     $grid_gap_x_mm = 3.5;
-    $grid_gap_y_mm = 3;
+    $grid_gap_y_mm = 3.5;
+    if ($ukuran_kertas === 'F4') {
+        $card_height_mm = 72;
+    } else {
+        $card_height_mm = 65;
+    }
 } elseif ($cards_per_page === 8) {
-    // 2 Kolom x 4 Baris (Format Besar)
+    // 2 Kolom x 4 Baris
     $grid_cols = 2;
     $grid_rows = 4;
-    $card_height_mm = 56;
     $grid_gap_x_mm = 4;
-    $grid_gap_y_mm = 3;
+    $grid_gap_y_mm = 3.5;
+    if ($ukuran_kertas === 'F4') {
+        $card_height_mm = 72;
+    } else {
+        $card_height_mm = 65;
+    }
 }
 
 // 4. Query Data Siswa
@@ -317,14 +362,14 @@ if ($mode_lembar === 'kelas') {
             column-gap: <?= $grid_gap_x_mm; ?>mm;
             row-gap: <?= $grid_gap_y_mm; ?>mm;
             box-sizing: border-box;
-            padding: 8mm 7mm;
+            padding: 6mm 6mm 10mm 6mm;
             width: <?= $ukuran_kertas === 'F4' ? '215mm' : '210mm'; ?>;
             border: 1.5px solid #cbd5e1;
             border-radius: 0 0 8px 8px;
             position: relative;
         }
 
-        /* DESAIN KARTU TOKEN - PRESISI MESIN POTONG & ANTI-OVERFLOW */
+        /* DESAIN KARTU TOKEN - PRESISI MESIN POTONG, TEGAS & ANTI-OVERFLOW */
         .card-token {
             box-sizing: border-box;
             width: 100%;
@@ -333,7 +378,7 @@ if ($mode_lembar === 'kelas') {
             min-height: <?= $card_height_mm; ?>mm;
             border: 1.5px dashed #0f172a;
             border-radius: 0;
-            padding: 4px 7px;
+            padding: 2.5px 5px;
             background-color: #ffffff;
             display: flex;
             flex-direction: column;
@@ -355,7 +400,7 @@ if ($mode_lembar === 'kelas') {
         }
 
         .empty-notice {
-            font-size: 0.60rem;
+            font-size: 0.58rem;
             color: #94a3b8;
             font-weight: 700;
             text-transform: uppercase;
@@ -370,45 +415,45 @@ if ($mode_lembar === 'kelas') {
             align-items: center;
             justify-content: space-between;
             border-bottom: 1px solid #e2e8f0;
-            padding-bottom: 2px;
+            padding-bottom: 1.5px;
             margin-bottom: 1px;
         }
 
         .header-left-brand {
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 4px;
             overflow: hidden;
         }
 
         .logo-slip {
-            width: 18px;
-            height: 18px;
+            width: 15px;
+            height: 15px;
             object-fit: contain;
             border-radius: 2px;
             flex-shrink: 0;
         }
 
         .logo-placeholder {
-            width: 18px;
-            height: 18px;
+            width: 15px;
+            height: 15px;
             border-radius: 2px;
             background: #2563eb;
             color: #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 9px;
+            font-size: 8px;
             flex-shrink: 0;
         }
 
         .header-text {
-            line-height: 1.1;
+            line-height: 1.05;
             overflow: hidden;
         }
 
         .header-text .app-name {
-            font-size: 0.54rem;
+            font-size: 0.50rem;
             font-weight: 800;
             color: #0f172a;
             text-transform: uppercase;
@@ -416,7 +461,7 @@ if ($mode_lembar === 'kelas') {
         }
 
         .header-text .school-name {
-            font-size: 0.46rem;
+            font-size: 0.42rem;
             font-weight: 700;
             color: #64748b;
             white-space: nowrap;
@@ -433,7 +478,7 @@ if ($mode_lembar === 'kelas') {
 
         /* BODY KARTU: NAMA, NIS, KELAS */
         .card-body-slip {
-            line-height: 1.2;
+            line-height: 1.15;
         }
 
         .info-value-name {
@@ -442,7 +487,7 @@ if ($mode_lembar === 'kelas') {
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            font-size: <?= $cards_per_page >= 18 ? '0.70rem' : '0.76rem'; ?>;
+            font-size: <?= $cards_per_page >= 24 ? '0.66rem' : ($cards_per_page >= 18 ? '0.70rem' : '0.76rem'); ?>;
             display: block;
             margin-bottom: 1px;
             text-transform: uppercase;
@@ -463,14 +508,14 @@ if ($mode_lembar === 'kelas') {
         .info-label {
             color: #64748b;
             font-weight: 600;
-            font-size: 0.62rem;
+            font-size: 0.58rem;
         }
 
         .info-value-nis {
             font-family: 'JetBrains Mono', monospace;
             font-weight: 700;
             color: #334155;
-            font-size: 0.66rem;
+            font-size: 0.62rem;
         }
 
         /* BADGE KELAS */
@@ -479,9 +524,9 @@ if ($mode_lembar === 'kelas') {
             background-color: #0f172a;
             color: #ffffff;
             font-weight: 800;
-            font-size: 0.64rem;
-            padding: 1px 4px;
-            border-radius: 3px;
+            font-size: 0.60rem;
+            padding: 0.5px 3.5px;
+            border-radius: 2px;
             letter-spacing: 0.2px;
             text-transform: uppercase;
             white-space: nowrap;
@@ -491,8 +536,8 @@ if ($mode_lembar === 'kelas') {
         .token-box {
             background: #f8fafc;
             border: 1px solid #cbd5e1;
-            border-radius: 4px;
-            padding: 1px 4px;
+            border-radius: 3px;
+            padding: 1px 3px;
             text-align: center;
             margin: 1px 0;
         }
@@ -505,26 +550,26 @@ if ($mode_lembar === 'kelas') {
         }
 
         .token-label {
-            font-size: 0.44rem;
+            font-size: 0.40rem;
             font-weight: 800;
             color: #64748b;
             text-transform: uppercase;
-            letter-spacing: 0.6px;
+            letter-spacing: 0.5px;
         }
 
         .security-text-tiny {
-            font-size: 0.42rem;
+            font-size: 0.38rem;
             color: #64748b;
             font-style: italic;
         }
 
         .token-value {
             font-family: 'JetBrains Mono', monospace;
-            font-size: <?= $cards_per_page >= 18 ? '1.05rem' : '1.18rem'; ?>;
+            font-size: <?= $cards_per_page >= 24 ? '1.02rem' : ($cards_per_page >= 18 ? '1.10rem' : '1.20rem'); ?>;
             font-weight: 900;
-            letter-spacing: <?= $cards_per_page >= 18 ? '2px' : '3px'; ?>;
+            letter-spacing: <?= $cards_per_page >= 24 ? '2px' : '3px'; ?>;
             color: #dc2626;
-            line-height: 1.1;
+            line-height: 1.05;
             display: inline-block;
         }
 
@@ -533,22 +578,22 @@ if ($mode_lembar === 'kelas') {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            font-size: 0.46rem;
+            font-size: 0.42rem;
             color: #64748b;
             border-top: 1px dotted #cbd5e1;
             padding-top: 1px;
-            margin-top: 1px;
+            margin-top: 0.5px;
         }
 
         .footer-note {
-            font-size: 0.44rem;
+            font-size: 0.40rem;
             color: #475569;
             font-weight: 600;
         }
 
         .barcode-sim {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.55rem;
+            font-size: 0.50rem;
             letter-spacing: -1px;
             color: #0f172a;
             font-weight: 900;
@@ -643,7 +688,7 @@ if ($mode_lembar === 'kelas') {
             }
             @page {
                 size: <?= $ukuran_kertas === 'F4' ? '215mm 330mm' : 'A4 portrait'; ?>;
-                margin: 6mm 6mm;
+                margin: 6mm 6mm 10mm 6mm;
             }
         }
     </style>
@@ -688,10 +733,12 @@ if ($mode_lembar === 'kelas') {
                         <i class="fas fa-th text-primary"></i> Kapasitas:
                     </label>
                     <select name="kapasitas" id="selectKapasitas" class="form-select-custom" onchange="this.form.submit()">
-                        <option value="15" <?= $cards_per_page === 15 ? 'selected' : ''; ?>>15 Kartu (3&times;5) - Hemat Kertas & Rapi (Rekomendasi)</option>
-                        <option value="18" <?= $cards_per_page === 18 ? 'selected' : ''; ?>>18 Kartu (3&times;6) - Super Hemat Kertas</option>
-                        <option value="20" <?= $cards_per_page === 20 ? 'selected' : ''; ?>>20 Kartu (4&times;5) - Maksimal 20 Kartu/Lembar</option>
-                        <option value="12" <?= $cards_per_page === 12 ? 'selected' : ''; ?>>12 Kartu (3&times;4) - Format Sedang</option>
+                        <option value="27" <?= $cards_per_page === 27 ? 'selected' : ''; ?>>27 Kartu (3&times;9) - Penuh Selembar F4 (9 Baris, Ekstrem Hemat Kertas)</option>
+                        <option value="24" <?= $cards_per_page === 24 ? 'selected' : ''; ?>>24 Kartu (3&times;8) - Penuh Selembar (8 Baris)</option>
+                        <option value="21" <?= $cards_per_page === 21 ? 'selected' : ''; ?>>21 Kartu (3&times;7) - Format 7 Baris</option>
+                        <option value="18" <?= $cards_per_page === 18 ? 'selected' : ''; ?>>18 Kartu (3&times;6) - Format 6 Baris</option>
+                        <option value="15" <?= $cards_per_page === 15 ? 'selected' : ''; ?>>15 Kartu (3&times;5) - Format 5 Baris (Lega)</option>
+                        <option value="12" <?= $cards_per_page === 12 ? 'selected' : ''; ?>>12 Kartu (3&times;4) - Format 4 Baris</option>
                         <option value="8" <?= $cards_per_page === 8 ? 'selected' : ''; ?>>8 Kartu (2&times;4) - Format Besar</option>
                     </select>
                 </div>
@@ -738,15 +785,16 @@ if ($mode_lembar === 'kelas') {
     <!-- AREA DOKUMEN CETAK -->
     <div class="paper-container">
 
-        <!-- NOTIFIKASI SCREEN: FORMAT WYSIWYG & ZERO SPILLOVER -->
+        <!-- NOTIFIKASI SCREEN: FORMAT WYSIWYG & PENUH SELEMBAR -->
         <div class="screen-only screen-notice">
             <div style="display: flex; align-items: center; gap: 10px;">
                 <i class="fas fa-check-circle" style="font-size: 1.3rem; color: #16a34a;"></i>
                 <div>
-                    <b>Format Presisi Anti-Pecah Aktif (Aman Margin Default):</b>
+                    <b>Format Presisi Pas Penuh Selembar Aktif:</b>
                     <span>
                         Setiap lembar memuat <b><?= $cards_per_page; ?> kartu (<?= $grid_cols; ?> kolom &times; <?= $grid_rows; ?> baris)</b>. 
-                        Tinggi total seluruh baris diatur presisi sehingga <b>dijamin 100% pas satu lembar penuh dan tidak akan pernah terpotong ke halaman 2</b> walaupun printer Anda menggunakan setelan Margin Default.
+                        Kartu mengisi lembar dari atas sampai batas bawah tanpa ruang kosong yang terbuang. 
+                        Garis potong putus-putus hitam pekat tegas dan tidak akan hilang di printer.
                     </span>
                 </div>
             </div>
