@@ -39,87 +39,87 @@ if (!in_array($kapasitas_pilihan, [8, 12, 15, 18, 21, 24, 27])) {
 }
 $cards_per_page = $kapasitas_pilihan;
 
-// Perhitungan Geometri Fisik Kertas & Kartu (Maksimal Mengisi Sampai Bawah F4 & A4)
+// Perhitungan Geometri Fisik Kertas & Kartu (Maksimal Mengisi Sampai Bawah F4 & A4 dengan Jarak Potong Antar-Baris)
 if ($cards_per_page === 27) {
-    // 3 Kolom x 9 Baris (5 Baris + 4 Baris Ekstra Kebawah - Penuh Selembar F4!)
+    // 3 Kolom x 9 Baris (5 Baris + 4 Baris Ekstra Kebawah - Penuh Selembar F4 dengan Jarak Potong Aman)
     $grid_cols = 3;
     $grid_rows = 9;
     $grid_gap_x_mm = 3;
-    $grid_gap_y_mm = 1.2;
+    $grid_gap_y_mm = 2.8; // Ditingkatkan dari 1.2mm ke 2.8mm agar garis potong atas-bawah tidak rempet
     if ($ukuran_kertas === 'F4') {
-        // F4: 9 baris x 33.5mm + 8 x 1.2mm = 311.1mm (Pas Penuh Lembar F4 330mm!)
-        $card_height_mm = 33.5;
+        // F4: 9 baris x 32mm + 8 x 2.8mm = 310.4mm (Pas Penuh Lembar F4 330mm!)
+        $card_height_mm = 32;
     } else {
-        // A4: 9 baris x 29.5mm + 8 x 1.2mm = 275.1mm (Pas Penuh Lembar A4 297mm!)
-        $card_height_mm = 29.5;
+        // A4: 9 baris x 28mm + 8 x 2.8mm = 274.4mm (Pas Penuh Lembar A4 297mm!)
+        $card_height_mm = 28;
     }
 } elseif ($cards_per_page === 24) {
     // 3 Kolom x 8 Baris
     $grid_cols = 3;
     $grid_rows = 8;
     $grid_gap_x_mm = 3;
-    $grid_gap_y_mm = 1.5;
+    $grid_gap_y_mm = 3.2; // Jarak potong antar-baris 3.2mm
     if ($ukuran_kertas === 'F4') {
-        // F4: 8 baris x 37.5mm + 7 x 1.5mm = 310.5mm (Pas Penuh Lembar F4!)
-        $card_height_mm = 37.5;
+        // F4: 8 baris x 36mm + 7 x 3.2mm = 310.4mm
+        $card_height_mm = 36;
     } else {
-        // A4: 8 baris x 33.5mm + 7 x 1.5mm = 278.5mm (Pas Penuh Lembar A4!)
-        $card_height_mm = 33.5;
+        // A4: 8 baris x 32mm + 7 x 3.2mm = 278.4mm
+        $card_height_mm = 32;
     }
 } elseif ($cards_per_page === 21) {
     // 3 Kolom x 7 Baris
     $grid_cols = 3;
     $grid_rows = 7;
     $grid_gap_x_mm = 3;
-    $grid_gap_y_mm = 2;
+    $grid_gap_y_mm = 3.8;
     if ($ukuran_kertas === 'F4') {
-        $card_height_mm = 42.5;
+        $card_height_mm = 41;
     } else {
-        $card_height_mm = 38;
+        $card_height_mm = 36.5;
     }
 } elseif ($cards_per_page === 18) {
     // 3 Kolom x 6 Baris
     $grid_cols = 3;
     $grid_rows = 6;
     $grid_gap_x_mm = 3;
-    $grid_gap_y_mm = 2.5;
+    $grid_gap_y_mm = 4.2;
     if ($ukuran_kertas === 'F4') {
-        $card_height_mm = 49;
+        $card_height_mm = 47;
     } else {
-        $card_height_mm = 44;
+        $card_height_mm = 42;
     }
 } elseif ($cards_per_page === 15) {
     // 3 Kolom x 5 Baris
     $grid_cols = 3;
     $grid_rows = 5;
     $grid_gap_x_mm = 3;
-    $grid_gap_y_mm = 3;
+    $grid_gap_y_mm = 4.8;
     if ($ukuran_kertas === 'F4') {
-        $card_height_mm = 58;
+        $card_height_mm = 56;
     } else {
-        $card_height_mm = 52;
+        $card_height_mm = 50;
     }
 } elseif ($cards_per_page === 12) {
     // 3 Kolom x 4 Baris
     $grid_cols = 3;
     $grid_rows = 4;
     $grid_gap_x_mm = 3.5;
-    $grid_gap_y_mm = 3.5;
+    $grid_gap_y_mm = 5.2;
     if ($ukuran_kertas === 'F4') {
-        $card_height_mm = 72;
+        $card_height_mm = 68;
     } else {
-        $card_height_mm = 65;
+        $card_height_mm = 62;
     }
 } elseif ($cards_per_page === 8) {
     // 2 Kolom x 4 Baris
     $grid_cols = 2;
     $grid_rows = 4;
     $grid_gap_x_mm = 4;
-    $grid_gap_y_mm = 3.5;
+    $grid_gap_y_mm = 5.2;
     if ($ukuran_kertas === 'F4') {
-        $card_height_mm = 72;
+        $card_height_mm = 68;
     } else {
-        $card_height_mm = 65;
+        $card_height_mm = 62;
     }
 }
 
