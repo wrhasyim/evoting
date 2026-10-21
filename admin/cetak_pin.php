@@ -331,22 +331,23 @@ if ($mode_lembar === 'kelas') {
             height: <?= $card_height_mm; ?>mm;
             max-height: <?= $card_height_mm; ?>mm;
             min-height: <?= $card_height_mm; ?>mm;
-            border: 1.2px dashed #64748b;
-            border-radius: 5px;
+            border: 1.5px dashed #0f172a;
+            border-radius: 0;
             padding: 4px 7px;
             background-color: #ffffff;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             position: relative;
-            overflow: hidden;
+            overflow: visible;
             page-break-inside: avoid;
             break-inside: avoid;
         }
 
         /* SLOT KOSONG UNTUK MENJAGA KOORDINAT POTONG 100% IDENTIK */
         .card-empty {
-            border: 1.2px dashed #cbd5e1;
+            border: 1.5px dashed #64748b;
+            border-radius: 0;
             background: #fbfcfe;
             display: flex;
             align-items: center;
@@ -598,7 +599,7 @@ if ($mode_lembar === 'kelas') {
                 max-height: none !important;
                 box-sizing: border-box !important;
                 margin: 0 !important;
-                padding: 0 !important;
+                padding: 0 1.5mm !important;
                 box-shadow: none !important;
                 border: none !important;
                 border-radius: 0 !important;
@@ -607,7 +608,9 @@ if ($mode_lembar === 'kelas') {
                 height: <?= $card_height_mm; ?>mm !important;
                 max-height: <?= $card_height_mm; ?>mm !important;
                 min-height: <?= $card_height_mm; ?>mm !important;
-                border: 1px dashed #475569 !important;
+                border: 1.5px dashed #000000 !important;
+                border-radius: 0 !important;
+                overflow: visible !important;
                 background-color: #ffffff !important;
                 break-inside: avoid !important;
                 page-break-inside: avoid !important;
@@ -615,7 +618,8 @@ if ($mode_lembar === 'kelas') {
                 print-color-adjust: exact !important;
             }
             .card-empty {
-                border: 1px dashed #cbd5e1 !important;
+                border: 1.5px dashed #64748b !important;
+                border-radius: 0 !important;
                 background: transparent !important;
                 visibility: visible !important;
             }
