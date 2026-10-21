@@ -367,11 +367,13 @@ if ($id_periode_aktif) {
                         <div class="mb-3">
                             <label class="form-label fw-bold"><i class="fas fa-th me-1 text-primary"></i> Kapasitas Kartu per Lembar</label>
                             <select name="kapasitas" class="form-select border-primary">
-                                <option value="8" selected>8 Kartu (2 Kolom &times; 4 Baris) - Sangat Proper & Aman Margin Default (Rekomendasi)</option>
-                                <option value="10">10 Kartu (2 Kolom &times; 5 Baris) - Padat 5 Baris</option>
-                                <option value="12">12 Kartu (3 Kolom &times; 4 Baris) - Standar 3 Kolom</option>
+                                <option value="15" selected>15 Kartu (3 Kolom &times; 5 Baris) - Hemat Kertas & Rapi (Rekomendasi)</option>
+                                <option value="18">18 Kartu (3 Kolom &times; 6 Baris) - Super Hemat Kertas</option>
+                                <option value="20">20 Kartu (4 Kolom &times; 5 Baris) - Maksimal 20 Kartu/Lembar</option>
+                                <option value="12">12 Kartu (3 Kolom &times; 4 Baris) - Format Sedang</option>
+                                <option value="8">8 Kartu (2 Kolom &times; 4 Baris) - Format Besar</option>
                             </select>
-                            <div class="form-text text-muted">Format 8 kartu berukuran besar, proper, dan terjamin 100% pas satu lembar tanpa terpotong margin default printer.</div>
+                            <div class="form-text text-muted">Didesain kompak dan pas dalam batas printable area printer, dijamin tidak akan terpotong pada Margin Default.</div>
                         </div>
 
                         <div class="mb-3">

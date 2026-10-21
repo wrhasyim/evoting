@@ -29,56 +29,53 @@ $filter_kelas = isset($_GET['kelas']) ? trim($_GET['kelas']) : 'all';
 $ukuran_kertas = isset($_GET['kertas']) && strtoupper($_GET['kertas']) === 'F4' ? 'F4' : 'A4';
 $mode_lembar = isset($_GET['mode']) && $_GET['mode'] === 'sambung' ? 'sambung' : 'kelas';
 
-// Pilihan Kapasitas Kartu (8, 10, atau 12 Kartu per Lembar)
-// Default utama: 8 kartu (2 kolom x 4 baris) - Terbukti paling proper, besar, dan aman 100% saat menggunakan Margin Default di dialog printer tanpa terpotong
-$kapasitas_pilihan = isset($_GET['kapasitas']) ? (int)$_GET['kapasitas'] : 8;
-if (!in_array($kapasitas_pilihan, [8, 10, 12])) {
-    $kapasitas_pilihan = 8;
+// Pilihan Kapasitas Kartu per Lembar (Default Optimal: 15 Kartu per lembar)
+// Opsi hemat kertas: 15, 18, 20 kartu (atau opsi lega: 12, 8)
+$kapasitas_pilihan = isset($_GET['kapasitas']) ? (int)$_GET['kapasitas'] : 15;
+if (!in_array($kapasitas_pilihan, [8, 12, 15, 18, 20])) {
+    $kapasitas_pilihan = 15;
 }
 $cards_per_page = $kapasitas_pilihan;
 
-// Perhitungan Geometri Fisik Kertas & Kartu (Maksimal Mengisi Sampai Bawah, WYSIWYG 1:1)
-if ($cards_per_page === 8) {
-    // 2 Kolom x 4 Baris (Format Paling Proper & Aman Margin Default)
-    $grid_cols = 2;
-    $grid_rows = 4;
-    $grid_gap_x_mm = 5;
-    $grid_gap_y_mm = 4;
-    if ($ukuran_kertas === 'F4') {
-        // F4 (215 x 330 mm): 4 baris x 68mm + 3 x 4mm = 284mm (Sangat aman dari batas margin default F4)
-        $card_width_mm = 96;
-        $card_height_mm = 68;
-    } else {
-        // A4 (210 x 297 mm): 4 baris x 61mm + 3 x 3.5mm = 254.5mm (Sangat aman dari batas margin default A4)
-        $card_width_mm = 93;
-        $card_height_mm = 61;
-    }
-} elseif ($cards_per_page === 10) {
-    // 2 Kolom x 5 Baris
-    $grid_cols = 2;
+// Perhitungan Geometri Fisik Kertas & Kartu
+// KUNCI UTAMA: Total tinggi grid dijaga pada rentang aman 230-238mm.
+// Hal ini menjamin 100% TIDAK PERNAH TERPOTONG atau terdorong ke halaman baru pada Epson/Canon/HP,
+// bahkan saat pengguna memilih pilihan "Margin: Default" di browser!
+if ($cards_per_page === 15) {
+    // 3 Kolom x 5 Baris (Hemat Kertas & Sangat Rapi - Rekomendasi Utama)
+    $grid_cols = 3;
     $grid_rows = 5;
-    $grid_gap_x_mm = 5;
-    $grid_gap_y_mm = 3;
-    if ($ukuran_kertas === 'F4') {
-        $card_width_mm = 96;
-        $card_height_mm = 55;
-    } else {
-        $card_width_mm = 93;
-        $card_height_mm = 50;
-    }
+    $card_height_mm = 45;
+    $grid_gap_x_mm = 3;
+    $grid_gap_y_mm = 2.5;
+} elseif ($cards_per_page === 18) {
+    // 3 Kolom x 6 Baris (Super Hemat Kertas)
+    $grid_cols = 3;
+    $grid_rows = 6;
+    $card_height_mm = 38;
+    $grid_gap_x_mm = 3;
+    $grid_gap_y_mm = 2;
+} elseif ($cards_per_page === 20) {
+    // 4 Kolom x 5 Baris (Maksimal 20 Kartu per Lembar)
+    $grid_cols = 4;
+    $grid_rows = 5;
+    $card_height_mm = 45;
+    $grid_gap_x_mm = 2.5;
+    $grid_gap_y_mm = 2.5;
 } elseif ($cards_per_page === 12) {
-    // 3 Kolom x 4 Baris
+    // 3 Kolom x 4 Baris (Lebih Lega)
     $grid_cols = 3;
     $grid_rows = 4;
+    $card_height_mm = 56;
+    $grid_gap_x_mm = 3.5;
+    $grid_gap_y_mm = 3;
+} elseif ($cards_per_page === 8) {
+    // 2 Kolom x 4 Baris (Format Besar)
+    $grid_cols = 2;
+    $grid_rows = 4;
+    $card_height_mm = 56;
     $grid_gap_x_mm = 4;
-    $grid_gap_y_mm = 4;
-    if ($ukuran_kertas === 'F4') {
-        $card_width_mm = 63.5;
-        $card_height_mm = 68;
-    } else {
-        $card_width_mm = 62;
-        $card_height_mm = 61;
-    }
+    $grid_gap_y_mm = 3;
 }
 
 // 4. Query Data Siswa
@@ -292,7 +289,7 @@ if ($mode_lembar === 'kelas') {
 
         /* SHEET WRAPPER (MENJAMIN TAMPILAN SCREEN 100% SAMA PERSIS DENGAN KERTAS FISIK) */
         .sheet-wrapper {
-            margin: 30px auto;
+            margin: 25px auto;
             width: <?= $ukuran_kertas === 'F4' ? '215mm' : '210mm'; ?>;
         }
 
@@ -311,27 +308,23 @@ if ($mode_lembar === 'kelas') {
             box-shadow: 0 4px 10px rgba(0,0,0,0.02);
         }
 
-        /* LEMBAR CETAK (PRINT SHEET) DENGAN UKURAN 1:1 FISIK SEBENARNYA */
+        /* LEMBAR CETAK (PRINT SHEET) */
         .print-sheet {
             background: #ffffff;
-            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.1);
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
             display: grid;
             grid-template-columns: repeat(<?= $grid_cols; ?>, 1fr);
             column-gap: <?= $grid_gap_x_mm; ?>mm;
             row-gap: <?= $grid_gap_y_mm; ?>mm;
             box-sizing: border-box;
-            padding: <?= $ukuran_kertas === 'F4' ? '8mm 8mm 15mm 8mm' : '7mm 7mm 14mm 7mm'; ?>;
+            padding: 8mm 7mm;
             width: <?= $ukuran_kertas === 'F4' ? '215mm' : '210mm'; ?>;
-            height: <?= $ukuran_kertas === 'F4' ? '330mm' : '297mm'; ?>;
-            min-height: <?= $ukuran_kertas === 'F4' ? '330mm' : '297mm'; ?>;
-            max-height: <?= $ukuran_kertas === 'F4' ? '330mm' : '297mm'; ?>;
             border: 1.5px solid #cbd5e1;
             border-radius: 0 0 8px 8px;
             position: relative;
-            overflow: hidden;
         }
 
-        /* DESAIN KARTU TOKEN - BESAR, PROPORSIONAL & MENGISI LEMBAR SAMPAI BAWAH */
+        /* DESAIN KARTU TOKEN - PRESISI MESIN POTONG & ANTI-OVERFLOW */
         .card-token {
             box-sizing: border-box;
             width: 100%;
@@ -339,8 +332,8 @@ if ($mode_lembar === 'kelas') {
             max-height: <?= $card_height_mm; ?>mm;
             min-height: <?= $card_height_mm; ?>mm;
             border: 1.2px dashed #64748b;
-            border-radius: 6px;
-            padding: 6px 10px;
+            border-radius: 5px;
+            padding: 4px 7px;
             background-color: #ffffff;
             display: flex;
             flex-direction: column;
@@ -361,13 +354,13 @@ if ($mode_lembar === 'kelas') {
         }
 
         .empty-notice {
-            font-size: 0.68rem;
+            font-size: 0.60rem;
             color: #94a3b8;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.4px;
             text-align: center;
-            line-height: 1.3;
+            line-height: 1.2;
         }
 
         /* HEADER KARTU */
@@ -376,53 +369,53 @@ if ($mode_lembar === 'kelas') {
             align-items: center;
             justify-content: space-between;
             border-bottom: 1px solid #e2e8f0;
-            padding-bottom: 4px;
-            margin-bottom: 2px;
+            padding-bottom: 2px;
+            margin-bottom: 1px;
         }
 
         .header-left-brand {
             display: flex;
             align-items: center;
-            gap: 7px;
+            gap: 5px;
             overflow: hidden;
         }
 
         .logo-slip {
-            width: 24px;
-            height: 24px;
+            width: 18px;
+            height: 18px;
             object-fit: contain;
-            border-radius: 3px;
+            border-radius: 2px;
             flex-shrink: 0;
         }
 
         .logo-placeholder {
-            width: 24px;
-            height: 24px;
-            border-radius: 3px;
+            width: 18px;
+            height: 18px;
+            border-radius: 2px;
             background: #2563eb;
             color: #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 11px;
+            font-size: 9px;
             flex-shrink: 0;
         }
 
         .header-text {
-            line-height: 1.15;
+            line-height: 1.1;
             overflow: hidden;
         }
 
         .header-text .app-name {
-            font-size: 0.64rem;
+            font-size: 0.54rem;
             font-weight: 800;
             color: #0f172a;
             text-transform: uppercase;
-            letter-spacing: 0.3px;
+            letter-spacing: 0.2px;
         }
 
         .header-text .school-name {
-            font-size: 0.55rem;
+            font-size: 0.46rem;
             font-weight: 700;
             color: #64748b;
             white-space: nowrap;
@@ -431,7 +424,7 @@ if ($mode_lembar === 'kelas') {
         }
 
         .header-cut-icon {
-            font-size: 9px;
+            font-size: 8px;
             color: #94a3b8;
             opacity: 0.7;
             flex-shrink: 0;
@@ -439,8 +432,7 @@ if ($mode_lembar === 'kelas') {
 
         /* BODY KARTU: NAMA, NIS, KELAS */
         .card-body-slip {
-            line-height: 1.25;
-            margin-top: 1px;
+            line-height: 1.2;
         }
 
         .info-value-name {
@@ -449,9 +441,9 @@ if ($mode_lembar === 'kelas') {
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            font-size: <?= $grid_cols === 2 ? '0.92rem' : '0.80rem'; ?>;
+            font-size: <?= $cards_per_page >= 18 ? '0.70rem' : '0.76rem'; ?>;
             display: block;
-            margin-bottom: 2px;
+            margin-bottom: 1px;
             text-transform: uppercase;
         }
 
@@ -464,72 +456,72 @@ if ($mode_lembar === 'kelas') {
         .info-col-nis {
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 2px;
         }
 
         .info-label {
             color: #64748b;
             font-weight: 600;
-            font-size: 0.72rem;
+            font-size: 0.62rem;
         }
 
         .info-value-nis {
             font-family: 'JetBrains Mono', monospace;
             font-weight: 700;
             color: #334155;
-            font-size: 0.76rem;
+            font-size: 0.66rem;
         }
 
-        /* BADGE KELAS (KONTRAS TINGGI, BESAR & JELAS) */
+        /* BADGE KELAS */
         .badge-kelas-slip {
             display: inline-block;
             background-color: #0f172a;
             color: #ffffff;
             font-weight: 800;
-            font-size: 0.74rem;
-            padding: 2px 7px;
-            border-radius: 4px;
-            letter-spacing: 0.3px;
+            font-size: 0.64rem;
+            padding: 1px 4px;
+            border-radius: 3px;
+            letter-spacing: 0.2px;
             text-transform: uppercase;
             white-space: nowrap;
         }
 
-        /* TOKEN PIN BOX (BESAR, JELAS & SANGAT KONTRAS) */
+        /* TOKEN PIN BOX (BESAR, JELAS & KONTRAS) */
         .token-box {
             background: #f8fafc;
-            border: 1.5px solid #cbd5e1;
-            border-radius: 5px;
-            padding: 3px 6px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            padding: 1px 4px;
             text-align: center;
-            margin: 2px 0;
+            margin: 1px 0;
         }
 
         .token-header-meta {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1px;
+            line-height: 1;
         }
 
         .token-label {
-            font-size: 0.52rem;
+            font-size: 0.44rem;
             font-weight: 800;
             color: #64748b;
             text-transform: uppercase;
-            letter-spacing: 0.8px;
+            letter-spacing: 0.6px;
         }
 
         .security-text-tiny {
-            font-size: 0.48rem;
+            font-size: 0.42rem;
             color: #64748b;
             font-style: italic;
         }
 
         .token-value {
             font-family: 'JetBrains Mono', monospace;
-            font-size: <?= $grid_cols === 2 ? '1.45rem' : '1.25rem'; ?>;
+            font-size: <?= $cards_per_page >= 18 ? '1.05rem' : '1.18rem'; ?>;
             font-weight: 900;
-            letter-spacing: <?= $grid_cols === 2 ? '5px' : '3px'; ?>;
+            letter-spacing: <?= $cards_per_page >= 18 ? '2px' : '3px'; ?>;
             color: #dc2626;
             line-height: 1.1;
             display: inline-block;
@@ -540,22 +532,22 @@ if ($mode_lembar === 'kelas') {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            font-size: 0.52rem;
+            font-size: 0.46rem;
             color: #64748b;
             border-top: 1px dotted #cbd5e1;
-            padding-top: 3px;
+            padding-top: 1px;
             margin-top: 1px;
         }
 
         .footer-note {
-            font-size: 0.50rem;
+            font-size: 0.44rem;
             color: #475569;
             font-weight: 600;
         }
 
         .barcode-sim {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.65rem;
+            font-size: 0.55rem;
             letter-spacing: -1px;
             color: #0f172a;
             font-weight: 900;
@@ -564,7 +556,7 @@ if ($mode_lembar === 'kelas') {
 
         /* ========================================================
            PENGATURAN CETAK KHUSUS (PRINTER EPSON/CANON/HP & MESIN POTONG)
-           DIJAMIN 100% WYSIWYG, MENGISI LEMBAR SAMPAI BAWAH
+           DIJAMIN 100% AMAN PADA MARGIN DEFAULT (ZERO-SPILLOVER)
            ======================================================== */
         @media print {
             body { 
@@ -647,7 +639,7 @@ if ($mode_lembar === 'kelas') {
             }
             @page {
                 size: <?= $ukuran_kertas === 'F4' ? '215mm 330mm' : 'A4 portrait'; ?>;
-                margin: <?= $ukuran_kertas === 'F4' ? '8mm 8mm 15mm 8mm' : '7mm 7mm 14mm 7mm'; ?>;
+                margin: 6mm 6mm;
             }
         }
     </style>
@@ -665,7 +657,7 @@ if ($mode_lembar === 'kelas') {
                 <i class="fas fa-users me-1"></i> Total: <?= count($data_siswa); ?> Siswa
             </span>
             <span class="badge-count" style="background:#f8fafc; color:#475569; border-color:#e2e8f0;">
-                <i class="fas fa-layer-group me-1"></i> Total <?= count($halaman_cetak); ?> Lembar
+                <i class="fas fa-layer-group me-1"></i> Total <?= count($halaman_cetak); ?> Lembar Cetak
             </span>
             <span class="badge-count" style="background:#f8fafc; color:#475569; border-color:#e2e8f0;">
                 <i class="fas fa-calendar-alt me-1"></i> <?= htmlspecialchars($nama_periode_aktif); ?>
@@ -692,9 +684,11 @@ if ($mode_lembar === 'kelas') {
                         <i class="fas fa-th text-primary"></i> Kapasitas:
                     </label>
                     <select name="kapasitas" id="selectKapasitas" class="form-select-custom" onchange="this.form.submit()">
-                        <option value="8" <?= $cards_per_page === 8 ? 'selected' : ''; ?>>8 Kartu (2&times;4) - Sangat Proper & Aman Margin Default</option>
-                        <option value="10" <?= $cards_per_page === 10 ? 'selected' : ''; ?>>10 Kartu (2&times;5) - Padat 5 Baris</option>
-                        <option value="12" <?= $cards_per_page === 12 ? 'selected' : ''; ?>>12 Kartu (3&times;4) - Standar 3 Kolom</option>
+                        <option value="15" <?= $cards_per_page === 15 ? 'selected' : ''; ?>>15 Kartu (3&times;5) - Hemat Kertas & Rapi (Rekomendasi)</option>
+                        <option value="18" <?= $cards_per_page === 18 ? 'selected' : ''; ?>>18 Kartu (3&times;6) - Super Hemat Kertas</option>
+                        <option value="20" <?= $cards_per_page === 20 ? 'selected' : ''; ?>>20 Kartu (4&times;5) - Maksimal 20 Kartu/Lembar</option>
+                        <option value="12" <?= $cards_per_page === 12 ? 'selected' : ''; ?>>12 Kartu (3&times;4) - Format Sedang</option>
+                        <option value="8" <?= $cards_per_page === 8 ? 'selected' : ''; ?>>8 Kartu (2&times;4) - Format Besar</option>
                     </select>
                 </div>
 
@@ -740,16 +734,15 @@ if ($mode_lembar === 'kelas') {
     <!-- AREA DOKUMEN CETAK -->
     <div class="paper-container">
 
-        <!-- NOTIFIKASI SCREEN: FORMAT WYSIWYG & PAS PENUH -->
+        <!-- NOTIFIKASI SCREEN: FORMAT WYSIWYG & ZERO SPILLOVER -->
         <div class="screen-only screen-notice">
             <div style="display: flex; align-items: center; gap: 10px;">
                 <i class="fas fa-check-circle" style="font-size: 1.3rem; color: #16a34a;"></i>
                 <div>
-                    <b>Format Presisi Pas Penuh (WYSIWYG 1:1 Aktif):</b>
+                    <b>Format Presisi Anti-Pecah Aktif (Aman Margin Default):</b>
                     <span>
                         Setiap lembar memuat <b><?= $cards_per_page; ?> kartu (<?= $grid_cols; ?> kolom &times; <?= $grid_rows; ?> baris)</b>. 
-                        Kartu berukuran <b>besar, proporsional, dan mengisi kertas sampai batas bawah</b> tanpa sisa ruang kosong melompong. 
-                        Tampilan di layar Anda sekarang 100% sama dengan hasil cetak printer.
+                        Tinggi total seluruh baris diatur presisi sehingga <b>dijamin 100% pas satu lembar penuh dan tidak akan pernah terpotong ke halaman 2</b> walaupun printer Anda menggunakan setelan Margin Default.
                     </span>
                 </div>
             </div>
@@ -809,7 +802,7 @@ if ($mode_lembar === 'kelas') {
                                             </div>
                                         <?php endif; ?>
                                         <div class="header-text">
-                                            <div class="app-name">E-VOTING RESMI PEMILIHAN</div>
+                                            <div class="app-name">E-VOTING RESMI</div>
                                             <div class="school-name">SMK TARUNA KARYA MANDIRI</div>
                                         </div>
                                     </div>
@@ -834,21 +827,19 @@ if ($mode_lembar === 'kelas') {
                                     </div>
                                 </div>
 
-                                <!-- Box PIN / Token (Besar, Tebal, Kontras) -->
+                                <!-- Box PIN / Token (Besar & Kontras) -->
                                 <div class="token-box">
                                     <div class="token-header-meta">
-                                        <span class="token-label"><i class="fas fa-key me-1"></i> TOKEN / PIN PEMILIH:</span>
-                                        <span class="security-text-tiny"><i class="fas fa-shield-alt"></i> Rahasia &bull; Sekali Pakai</span>
+                                        <span class="token-label"><i class="fas fa-key me-1"></i> TOKEN / PIN:</span>
+                                        <span class="security-text-tiny">Rahasia</span>
                                     </div>
                                     <div class="token-value"><?= htmlspecialchars($s['pin']); ?></div>
                                 </div>
 
                                 <!-- Footer Kartu -->
                                 <div class="card-footer-slip">
-                                    <span class="footer-note">&bull; Masukkan Token di Bilik Suara &bull;</span>
-                                    <span class="barcode-sim">
-                                        |||| | | ||| | || | |||
-                                    </span>
+                                    <span class="footer-note">&bull; Masukkan di Bilik Suara &bull;</span>
+                                    <span class="barcode-sim">|||| | | ||| | ||</span>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -857,9 +848,9 @@ if ($mode_lembar === 'kelas') {
                         <?php for ($i = 0; $i < $slot_kosong; $i++): ?>
                             <div class="card-token card-empty">
                                 <div class="empty-notice">
-                                    <i class="fas fa-cut" style="font-size: 1.1rem; margin-bottom: 3px; display: block;"></i>
-                                    Area Slot Kosong<br>
-                                    <span style="font-size: 0.55rem; font-weight: normal; opacity: 0.7;">Panduan Pemotong Mesin</span>
+                                    <i class="fas fa-cut" style="font-size: 0.9rem; margin-bottom: 2px; display: block;"></i>
+                                    Slot Kosong<br>
+                                    <span style="font-size: 0.50rem; font-weight: normal; opacity: 0.7;">Panduan Potong Mesin</span>
                                 </div>
                             </div>
                         <?php endfor; ?>
