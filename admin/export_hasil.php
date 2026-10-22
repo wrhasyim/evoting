@@ -16,7 +16,13 @@ header("Expires: 0");
 
 if ($id_eskul === 'all') {
     header("Content-Disposition: attachment; filename=Laporan_Hasil_Pemilu_Semua_Eskul.xls");
-    $stmt_eskul = $pdo->query("SELECT id_eskul, nama_eskul FROM eskul WHERE status_aktif = 1 ORDER BY id_eskul ASC");
+    $stmt_eskul = $pdo->query("
+        SELECT DISTINCT e.id_eskul, e.nama_eskul 
+        FROM eskul e 
+        JOIN kandidat k ON e.id_eskul = k.id_eskul 
+        WHERE e.status_aktif = 1 AND k.status_aktif = 1 
+        ORDER BY e.id_eskul ASC
+    ");
     $list_eskul = $stmt_eskul->fetchAll(PDO::FETCH_ASSOC);
     ?>
     <table border="1">

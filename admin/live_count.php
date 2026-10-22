@@ -8,8 +8,14 @@ if (!isset($_SESSION['admin_logged_in'])) {
     exit;
 }
 
-// Mengambil daftar eskul untuk dropdown (pilihan filter)
-$stmt_eskul = $pdo->query("SELECT id_eskul, nama_eskul, status_pemilihan FROM eskul WHERE status_aktif = 1 ORDER BY id_eskul ASC");
+// Mengambil daftar eskul untuk dropdown (HANYA yang memiliki kandidat aktif)
+$stmt_eskul = $pdo->query("
+    SELECT DISTINCT e.id_eskul, e.nama_eskul, e.status_pemilihan 
+    FROM eskul e 
+    JOIN kandidat k ON e.id_eskul = k.id_eskul 
+    WHERE e.status_aktif = 1 AND k.status_aktif = 1 
+    ORDER BY e.id_eskul ASC
+");
 $daftar_eskul = $stmt_eskul->fetchAll();
 
 // Default: 'all' (Tampilkan semua eskul & kandidat sekaligus)
@@ -384,16 +390,6 @@ $id_eskul_pilih = isset($_GET['id_eskul']) ? $_GET['id_eskul'] : 'all';
                                         </div>
                                     `;
                                 });
-                            }
-
-                            if (eskulTanpaKandidat.length > 0) {
-                                let badgeList = eskulTanpaKandidat.map(e => `<span class="badge badge-light border text-muted py-2 px-3">${e.nama_eskul}</span>`).join(' ');
-                                outputHtml += `
-                                    <div class="alert alert-light border rounded-3 p-3 mt-4 text-center">
-                                        <small class="text-muted d-block mb-2"><b>Ekstrakurikuler Lainnya (Belum memiliki paslon):</b></small>
-                                        <div class="d-flex flex-wrap justify-content-center gap-1">${badgeList}</div>
-                                    </div>
-                                `;
                             }
                         }
                     } else {

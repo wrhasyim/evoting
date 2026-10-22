@@ -46,6 +46,8 @@ if ($id_eskul === 'all' || empty($id_eskul)) {
     foreach ($daftar_eskul as $e) {
         $idE = $e['id_eskul'];
         $kandidats = $kandidat_by_eskul[$idE] ?? [];
+        if (empty($kandidats)) continue; // Hanya sertakan eskul yang memiliki kandidat aktif
+        
         $total_suara = $total_map[$idE] ?? 0;
         
         $data_eskul[] = [
