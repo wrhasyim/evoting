@@ -870,7 +870,7 @@ if ($mode_lembar === 'kelas') {
                                     </span>
                                     <div class="info-row-combined">
                                         <div class="info-col-nis">
-                                            <span class="info-label">NIS:</span>
+                                            <span class="info-label"><?= ($s['kelas'] === 'GURU' ? 'ID:' : 'NIS:'); ?></span>
                                             <span class="info-value-nis"><?= htmlspecialchars($s['nis']); ?></span>
                                         </div>
                                         <div class="info-col-kelas">

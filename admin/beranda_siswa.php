@@ -264,8 +264,8 @@ if (isset($_POST['submit_vote_hidden'])) {
                     <?= htmlspecialchars($siswa['nama_siswa']); ?>
                 </h4>
                 <div class="d-flex align-items-center gap-2 mt-1">
-                    <span class="badge bg-primary px-3 py-1 font-monospace">NIS: <?= htmlspecialchars($siswa['nis']); ?></span>
-                    <span class="badge bg-dark px-3 py-1 font-monospace">Kelas: <?= htmlspecialchars($siswa['kelas']); ?></span>
+                    <span class="badge bg-primary px-3 py-1 font-monospace"><?= ($siswa['kelas'] === 'GURU' ? 'ID Guru' : 'NIS'); ?>: <?= htmlspecialchars($siswa['nis']); ?></span>
+                    <span class="badge bg-dark px-3 py-1 font-monospace"><?= ($siswa['kelas'] === 'GURU' ? 'Status' : 'Kelas'); ?>: <?= htmlspecialchars($siswa['kelas']); ?></span>
                 </div>
             </div>
             <div>

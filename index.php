@@ -385,7 +385,7 @@ if (isset($_POST['login'])) {
             <div class="login-hint-card">
                 <i class="fas fa-info-circle text-primary fs-5"></i>
                 <div>
-                    <b>Siswa:</b> Gunakan NIS & PIN dari Panitia.<br>
+                    <b>Pemilih (Siswa & Guru):</b> Gunakan NIS / ID (cth: 001) & Kata Sandi / PIN.<br>
                     <b>Admin:</b> Gunakan Username & Sandi.
                 </div>
             </div>

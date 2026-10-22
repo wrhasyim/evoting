@@ -11,28 +11,33 @@ if (!isset($_SESSION['admin_logged_in'])) {
 }
 
 // LOGIKA ANALITIK
-// A. Menghitung Total Siswa
+// A. Menghitung Total Pemilih (Siswa & Guru)
 $stmt_total = $pdo->query("SELECT COUNT(*) FROM siswa WHERE status_aktif = 1");
-$total_siswa = (int) $stmt_total->fetchColumn();
+$total_pemilih = (int) $stmt_total->fetchColumn();
 
-// B. Menghitung Siswa Sudah Memilih
+$stmt_guru = $pdo->query("SELECT COUNT(*) FROM siswa WHERE status_aktif = 1 AND kelas = 'GURU'");
+$total_guru = (int) $stmt_guru->fetchColumn();
+$total_siswa = $total_pemilih - $total_guru;
+
+// B. Menghitung Pemilih Sudah Memilih
 $stmt_sudah = $pdo->query("SELECT COUNT(*) FROM siswa WHERE status_pilih = 1 AND status_aktif = 1");
 $siswa_sudah = (int) $stmt_sudah->fetchColumn();
 
-// C. Menghitung Siswa Belum Memilih
+// C. Menghitung Pemilih Belum Memilih
 $stmt_belum = $pdo->query("SELECT COUNT(*) FROM siswa WHERE status_pilih = 0 AND status_aktif = 1");
 $siswa_belum = (int) $stmt_belum->fetchColumn();
 
-// D. Menghitung Siswa Tanpa Eskul (Siswa Bodong)
-$stmt_bodong = $pdo->query("SELECT COUNT(*) FROM siswa WHERE id_siswa NOT IN (SELECT id_siswa FROM anggota_eskul) AND status_aktif = 1");
+// D. Menghitung Siswa Tanpa Eskul (Siswa Bodong, tidak termasuk Dewan Guru)
+$stmt_bodong = $pdo->query("SELECT COUNT(*) FROM siswa WHERE id_siswa NOT IN (SELECT id_siswa FROM anggota_eskul) AND status_aktif = 1 AND kelas != 'GURU'");
 $siswa_bodong = (int) $stmt_bodong->fetchColumn();
 
-// FITUR REKAPAN: Detail data siswa tanpa eskul
+// FITUR REKAPAN: Detail data siswa tanpa eskul (tidak termasuk Dewan Guru)
 $stmt_list_bodong = $pdo->query("
     SELECT nis, nama_siswa, kelas 
     FROM siswa 
     WHERE id_siswa NOT IN (SELECT id_siswa FROM anggota_eskul) 
     AND status_aktif = 1 
+    AND kelas != 'GURU'
     ORDER BY kelas ASC, nama_siswa ASC
 ");
 $list_siswa_bodong = $stmt_list_bodong->fetchAll();
@@ -52,7 +57,7 @@ $stmt_log = $pdo->query("SELECT a.username, l.aktivitas, l.waktu FROM log_aktivi
 $data_log = $stmt_log->fetchAll();
 
 // G. PROGRESS BAR PERCENTAGE
-$persentase_pemilih = ($total_siswa > 0) ? round(($siswa_sudah / $total_siswa) * 100, 1) : 0;
+$persentase_pemilih = ($total_pemilih > 0) ? round(($siswa_sudah / $total_pemilih) * 100, 1) : 0;
 ?>
 
 <!DOCTYPE html>
@@ -102,10 +107,10 @@ $persentase_pemilih = ($total_siswa > 0) ? round(($siswa_sudah / $total_siswa) *
                 <div class="card-stat bg-grad-primary">
                     <div>
                         <h5>Total Pemilih</h5>
-                        <h2><?= number_format($total_siswa); ?> <span class="fs-6 fw-normal opacity-75">Siswa</span></h2>
+                        <h2><?= number_format($total_pemilih); ?> <span class="fs-6 fw-normal opacity-75">Orang</span></h2>
                     </div>
                     <div class="d-flex align-items-center justify-content-between mt-2 pt-2 border-top border-white border-opacity-25 small opacity-90">
-                        <span>Data Terdaftar Aktif</span>
+                        <span><?= number_format($total_siswa); ?> Siswa &bull; <?= number_format($total_guru); ?> Guru</span>
                         <i class="fas fa-arrow-right"></i>
                     </div>
                     <i class="fas fa-users icon-bg"></i>
@@ -115,7 +120,7 @@ $persentase_pemilih = ($total_siswa > 0) ? round(($siswa_sudah / $total_siswa) *
                 <div class="card-stat bg-grad-success">
                     <div>
                         <h5>Sudah Memilih</h5>
-                        <h2><?= number_format($siswa_sudah); ?> <span class="fs-6 fw-normal opacity-75">Siswa</span></h2>
+                        <h2><?= number_format($siswa_sudah); ?> <span class="fs-6 fw-normal opacity-75">Pemilih</span></h2>
                     </div>
                     <div class="d-flex align-items-center justify-content-between mt-2 pt-2 border-top border-white border-opacity-25 small opacity-90">
                         <span>Partisipasi: <?= $persentase_pemilih; ?>%</span>
@@ -128,10 +133,10 @@ $persentase_pemilih = ($total_siswa > 0) ? round(($siswa_sudah / $total_siswa) *
                 <div class="card-stat bg-grad-warning">
                     <div>
                         <h5>Belum Memilih</h5>
-                        <h2><?= number_format($siswa_belum); ?> <span class="fs-6 fw-normal opacity-75">Siswa</span></h2>
+                        <h2><?= number_format($siswa_belum); ?> <span class="fs-6 fw-normal opacity-75">Pemilih</span></h2>
                     </div>
                     <div class="d-flex align-items-center justify-content-between mt-2 pt-2 border-top border-white border-opacity-25 small opacity-90">
-                        <span>Sisa: <?= ($total_siswa > 0) ? round(($siswa_belum / $total_siswa) * 100, 1) : 0; ?>%</span>
+                        <span>Sisa: <?= ($total_pemilih > 0) ? round(($siswa_belum / $total_pemilih) * 100, 1) : 0; ?>%</span>
                         <i class="fas fa-hourglass-half"></i>
                     </div>
                     <i class="fas fa-user-clock icon-bg"></i>
@@ -144,7 +149,7 @@ $persentase_pemilih = ($total_siswa > 0) ? round(($siswa_sudah / $total_siswa) *
                         <h2><?= number_format($siswa_bodong); ?> <span class="fs-6 fw-normal opacity-75">Siswa</span></h2>
                     </div>
                     <div class="d-flex align-items-center justify-content-between mt-2 pt-2 border-top border-white border-opacity-25 small opacity-90">
-                        <span>Perlu Penugasan</span>
+                        <span>Khusus Siswa</span>
                         <i class="fas fa-exclamation-triangle"></i>
                     </div>
                     <i class="fas fa-user-slash icon-bg"></i>
@@ -157,7 +162,7 @@ $persentase_pemilih = ($total_siswa > 0) ? round(($siswa_sudah / $total_siswa) *
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div>
                     <h5 class="fw-bold m-0 text-dark"><i class="fas fa-chart-line text-primary me-2"></i> Progress Partisipasi Suara</h5>
-                    <small class="text-muted"><?= $siswa_sudah; ?> dari <?= $total_siswa; ?> siswa telah menyalurkan hak suara</small>
+                    <small class="text-muted"><?= $siswa_sudah; ?> dari <?= $total_pemilih; ?> pemilih telah menyalurkan hak suara</small>
                 </div>
                 <div class="text-end">
                     <span class="fs-4 fw-bold text-success"><?= $persentase_pemilih; ?>%</span>

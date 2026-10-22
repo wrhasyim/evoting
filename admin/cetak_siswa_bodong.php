@@ -16,12 +16,13 @@ $periode_aktif = $stmt_periode->fetch();
 $id_periode_aktif = $periode_aktif['id_periode'] ?? null;
 $nama_periode_aktif = $periode_aktif['nama_periode'] ?? 'T.A Tidak Diketahui';
 
-// 2. Ambil Daftar Kelas untuk Filter
+// 2. Ambil Daftar Kelas untuk Filter (Hanya Siswa, bukan Dewan Guru)
 $stmt_kelas = $pdo->prepare("
     SELECT DISTINCT kelas 
     FROM siswa 
     WHERE id_siswa NOT IN (SELECT id_siswa FROM anggota_eskul) 
     AND status_aktif = 1 
+    AND kelas != 'GURU'
     " . ($id_periode_aktif ? "AND id_periode = $id_periode_aktif" : "") . "
     ORDER BY kelas ASC
 ");
@@ -32,13 +33,14 @@ $daftar_kelas = $stmt_kelas->fetchAll(PDO::FETCH_COLUMN);
 $filter_kelas = isset($_GET['kelas']) ? trim($_GET['kelas']) : 'all';
 $ukuran_kertas = isset($_GET['kertas']) && strtoupper($_GET['kertas']) === 'F4' ? 'F4' : 'A4';
 
-// 4. Query Data Siswa Tanpa Eskul
+// 4. Query Data Siswa Tanpa Eskul (Eksklusif Siswa)
 $params = [];
 $query = "
     SELECT id_siswa, nis, nama_siswa, kelas 
     FROM siswa 
     WHERE id_siswa NOT IN (SELECT id_siswa FROM anggota_eskul) 
     AND status_aktif = 1
+    AND kelas != 'GURU'
 ";
 
 if ($id_periode_aktif) {

@@ -40,8 +40,8 @@ if ($filter === 'all') {
 } elseif (strpos($filter, 'kelas_') === 0) {
     $mode_kategori = "kelas";
     $nama_kelas = substr($filter, 6); 
-    $sub_judul = "Kategori: Khusus Kelas " . strtoupper($nama_kelas);
-    $teks_ttd_default = "Wali Kelas " . $nama_kelas;
+    $sub_judul = ($nama_kelas === 'GURU') ? "Kategori: Khusus Dewan Guru & Staf" : "Kategori: Khusus Kelas " . strtoupper($nama_kelas);
+    $teks_ttd_default = ($nama_kelas === 'GURU') ? "Perwakilan Dewan Guru" : "Wali Kelas " . $nama_kelas;
     
     $stmt = $pdo->prepare("SELECT nis, nama_siswa, kelas FROM siswa WHERE id_periode = ? AND status_aktif = 1 AND kelas = ? ORDER BY nama_siswa ASC");
     $stmt->execute([$id_periode_aktif, $nama_kelas]);
@@ -268,7 +268,7 @@ if ($mode_kategori === "kelas") {
             
             foreach ($struktur_data as $label_bagian => $daftar_anggota): 
                 $counter++;
-                $tampil_teks_ttd = ($mode_kategori === "kelas") ? "Wali Kelas " . $label_bagian : $teks_ttd_default;
+                $tampil_teks_ttd = ($mode_kategori === "kelas") ? (($label_bagian === 'GURU') ? "Perwakilan Dewan Guru" : "Wali Kelas " . $label_bagian) : $teks_ttd_default;
             ?>
                 
                 <div class="<?= ($counter < $total_bagian && $mode_kategori === 'kelas') ? 'page-break' : ''; ?>">
@@ -290,8 +290,8 @@ if ($mode_kategori === "kelas") {
 
                     <?php if ($mode_kategori === "kelas"): ?>
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="fw-bold m-0">Kelas: <span class="editable" contenteditable="true"><?= htmlspecialchars($label_bagian); ?></span></h5>
-                            <span style="font-size: 0.95rem;">Jumlah Siswa: <b><?= count($daftar_anggota); ?></b></span>
+                            <h5 class="fw-bold m-0"><?= ($label_bagian === 'GURU' ? 'Kategori:' : 'Kelas:'); ?> <span class="editable" contenteditable="true"><?= htmlspecialchars($label_bagian === 'GURU' ? 'DEWAN GURU & STAF' : $label_bagian); ?></span></h5>
+                            <span style="font-size: 0.95rem;"><?= ($label_bagian === 'GURU' ? 'Jumlah Pemilih (Guru):' : 'Jumlah Siswa:'); ?> <b><?= count($daftar_anggota); ?></b></span>
                         </div>
                     <?php endif; ?>
                     
@@ -300,8 +300,8 @@ if ($mode_kategori === "kelas") {
                         <thead>
                             <tr>
                                 <th style="width: 5%;">No</th>
-                                <th style="width: 18%;">NIS</th>
-                                <th>Nama Lengkap Siswa</th>
+                                <th style="width: 18%;"><?= ($label_bagian === 'GURU' ? 'ID / Username' : 'NIS'); ?></th>
+                                <th><?= ($label_bagian === 'GURU' ? 'Nama Lengkap Guru' : 'Nama Lengkap Siswa'); ?></th>
                                 <?php if ($mode_kategori === "eskul"): ?>
                                     <th style="width: 15%;">Kelas</th>
                                     <th colspan="2" style="width: 32%;">Tanda Tangan / Verifikasi</th>
