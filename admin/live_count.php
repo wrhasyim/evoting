@@ -43,12 +43,13 @@ $id_eskul_pilih = isset($_GET['id_eskul']) ? $_GET['id_eskul'] : 'all';
             border-radius: 9999px;
             background-color: #f1f5f9;
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+            overflow: hidden;
         }
         .progress-live .progress-bar {
             font-size: 0.88rem;
             font-weight: 800;
             line-height: 28px;
-            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1) !important;
         }
         .live-indicator {
             display: inline-flex;
@@ -90,7 +91,7 @@ $id_eskul_pilih = isset($_GET['id_eskul']) ? $_GET['id_eskul'] : 'all';
             border: 1px solid #edf2f7;
             margin-bottom: 14px;
             background: #ffffff;
-            transition: all 0.3s ease;
+            transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
         }
         .candidate-card-item.leading {
             border-color: #3b82f6;
@@ -113,7 +114,7 @@ $id_eskul_pilih = isset($_GET['id_eskul']) ? $_GET['id_eskul'] : 'all';
                         <span class="pulse-dot"></span>
                         <span>SERVER LIVE COUNT AKTIF</span>
                     </span>
-                    <small class="text-muted">&bull; Sinkronisasi otomatis setiap 3 detik</small>
+                    <small class="text-muted">&bull; Sinkronisasi otomatis setiap 3 detik (Smooth 60FPS)</small>
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2 flex-wrap">
@@ -168,7 +169,7 @@ $id_eskul_pilih = isset($_GET['id_eskul']) ? $_GET['id_eskul'] : 'all';
 
     </div>
 
-    <!-- SCRIPT AJAX REAL-TIME -->
+    <!-- SCRIPT AJAX REAL-TIME (SMOOTH & FLICKER-FREE) -->
     <script>
         const idEskulAktif = <?= json_encode($id_eskul_pilih); ?>;
         const warnaGradients = [
@@ -179,6 +180,9 @@ $id_eskul_pilih = isset($_GET['id_eskul']) ? $_GET['id_eskul'] : 'all';
             'bg-grad-danger'
         ];
 
+        let domInitialized = false;
+        let lastRenderMode = null;
+
         function renderCandidateItem(paslon, index, totalSuaraEskul, maxSuara) {
             let persentase = 0;
             if (totalSuaraEskul > 0) {
@@ -187,11 +191,10 @@ $id_eskul_pilih = isset($_GET['id_eskul']) ? $_GET['id_eskul'] : 'all';
 
             const isLeading = totalSuaraEskul > 0 && parseInt(paslon.perolehan) === maxSuara && maxSuara > 0;
             const warnaPilihan = warnaGradients[index % warnaGradients.length];
-
             const fotoSrc = paslon.foto ? `../uploads/${paslon.foto}` : 'https://via.placeholder.com/150?text=Foto';
 
             return `
-                <div class="candidate-card-item ${isLeading ? 'leading' : ''}">
+                <div class="candidate-card-item ${isLeading ? 'leading' : ''}" id="card-candidate-${paslon.id_kandidat}">
                     <div class="row align-items-center g-3">
                         <div class="col-auto text-center position-relative">
                             <img src="${fotoSrc}" alt="Foto" class="foto-kandidat-live" onerror="this.onerror=null; this.src='https://via.placeholder.com/150?text=Foto';">
@@ -204,15 +207,20 @@ $id_eskul_pilih = isset($_GET['id_eskul']) ? $_GET['id_eskul'] : 'all';
                                 <div>
                                     <span class="fw-bold fs-6 text-dark me-2">${paslon.nama_paslon}</span>
                                     <span class="badge badge-soft-secondary small font-monospace">${paslon.kelas_paslon || ''}</span>
-                                    ${isLeading ? '<span class="badge badge-soft-success ms-2"><i class="fas fa-crown me-1 text-warning"></i> Unggul Sementara</span>' : ''}
+                                    <span class="badge badge-soft-success ms-2 ${isLeading ? '' : 'd-none'}" id="leading-badge-${paslon.id_kandidat}">
+                                        <i class="fas fa-crown me-1 text-warning"></i> Unggul Sementara
+                                    </span>
                                 </div>
                                 <div class="text-end">
-                                    <span class="fs-5 fw-bold font-monospace text-primary">${parseInt(paslon.perolehan || 0).toLocaleString('id-ID')} Suara</span>
-                                    <span class="badge badge-soft-secondary ms-2">${persentase}%</span>
+                                    <span class="fs-5 fw-bold font-monospace text-primary" id="suara-val-${paslon.id_kandidat}">
+                                        ${parseInt(paslon.perolehan || 0).toLocaleString('id-ID')} Suara
+                                    </span>
+                                    <span class="badge badge-soft-secondary ms-2" id="pct-val-${paslon.id_kandidat}">${persentase}%</span>
                                 </div>
                             </div>
                             <div class="progress progress-live mt-2">
                                 <div class="progress-bar ${warnaPilihan} progress-bar-striped progress-bar-animated text-white" 
+                                     id="bar-val-${paslon.id_kandidat}"
                                      role="progressbar" 
                                      style="width: ${persentase}%;" 
                                      aria-valuenow="${persentase}" 
@@ -225,6 +233,48 @@ $id_eskul_pilih = isset($_GET['id_eskul']) ? $_GET['id_eskul'] : 'all';
                     </div>
                 </div>
             `;
+        }
+
+        // UPDATE ELEMENT SECARA IN-PLACE (MENCEGAH KREJET-KREJET / FLICKERING)
+        function updateCandidateInPlace(paslon, totalSuaraEskul, maxSuara) {
+            let persentase = 0;
+            if (totalSuaraEskul > 0) {
+                persentase = ((paslon.perolehan / totalSuaraEskul) * 100).toFixed(1);
+            }
+            const isLeading = totalSuaraEskul > 0 && parseInt(paslon.perolehan) === maxSuara && maxSuara > 0;
+            const suaraFormatted = parseInt(paslon.perolehan || 0).toLocaleString('id-ID') + ' Suara';
+
+            const card = document.getElementById(`card-candidate-${paslon.id_kandidat}`);
+            const elSuara = document.getElementById(`suara-val-${paslon.id_kandidat}`);
+            const elPct = document.getElementById(`pct-val-${paslon.id_kandidat}`);
+            const elBar = document.getElementById(`bar-val-${paslon.id_kandidat}`);
+            const elLeading = document.getElementById(`leading-badge-${paslon.id_kandidat}`);
+
+            if (elSuara && elSuara.innerText !== suaraFormatted) {
+                elSuara.innerText = suaraFormatted;
+            }
+            if (elPct && elPct.innerText !== (persentase + '%')) {
+                elPct.innerText = persentase + '%';
+            }
+            if (elBar) {
+                elBar.style.width = persentase + '%';
+                elBar.setAttribute('aria-valuenow', persentase);
+                elBar.innerText = persentase >= 8 ? (persentase + '%') : '';
+            }
+            if (card) {
+                if (isLeading) {
+                    card.classList.add('leading');
+                } else {
+                    card.classList.remove('leading');
+                }
+            }
+            if (elLeading) {
+                if (isLeading) {
+                    elLeading.classList.remove('d-none');
+                } else {
+                    elLeading.classList.add('d-none');
+                }
+            }
         }
 
         function muatDataRealtime() {
@@ -240,14 +290,47 @@ $id_eskul_pilih = isset($_GET['id_eskul']) ? $_GET['id_eskul'] : 'all';
                     const wadah = document.getElementById('wadah-semua-eskul');
                     if (!wadah) return;
 
+                    // Perbarui Angka Total Suara Keseluruhan
+                    const totalSemua = parseInt(data.total_suara_keseluruhan !== undefined ? data.total_suara_keseluruhan : (data.total_suara || 0));
+                    if (elTotal && elTotal.innerText !== totalSemua.toLocaleString('id-ID')) {
+                        elTotal.innerText = totalSemua.toLocaleString('id-ID');
+                    }
+
+                    // JIKA DOM SUDAH ADA, LAKUKAN IN-PLACE UPDATE (SMOOTH & ZERO FLICKER)
+                    if (domInitialized && lastRenderMode === data.mode) {
+                        if (data.mode === 'all') {
+                            const eskulDenganKandidat = data.data_eskul.filter(e => e.kandidat && e.kandidat.length > 0);
+                            eskulDenganKandidat.forEach(eskul => {
+                                const totalEskul = parseInt(eskul.total_suara || 0);
+                                const maxSuara = Math.max(...eskul.kandidat.map(k => parseInt(k.perolehan || 0)));
+                                const elTotalEskul = document.getElementById(`eskul-total-val-${eskul.id_eskul}`);
+                                if (elTotalEskul) {
+                                    elTotalEskul.innerText = totalEskul.toLocaleString('id-ID') + ' Suara Masuk';
+                                }
+                                eskul.kandidat.forEach(paslon => {
+                                    updateCandidateInPlace(paslon, totalEskul, maxSuara);
+                                });
+                            });
+                        } else {
+                            const totalEskul = parseInt(data.total_suara || 0);
+                            const maxSuara = data.kandidat && data.kandidat.length > 0 ? Math.max(...data.kandidat.map(k => parseInt(k.perolehan || 0))) : 0;
+                            const elTotalEskul = document.getElementById(`eskul-total-val-${data.id_eskul}`);
+                            if (elTotalEskul) {
+                                elTotalEskul.innerText = totalEskul.toLocaleString('id-ID') + ' Suara Masuk';
+                            }
+                            if (data.kandidat) {
+                                data.kandidat.forEach(paslon => {
+                                    updateCandidateInPlace(paslon, totalEskul, maxSuara);
+                                });
+                            }
+                        }
+                        return;
+                    }
+
+                    // INITIAL RENDER (PERTAMA KALI ATAU JIKA MODE BERUBAH)
                     let outputHtml = '';
 
-                    // 1. JIKA MODE SEMUA ESKUL
                     if (data.mode === 'all') {
-                        if (elTotal) {
-                            elTotal.innerText = parseInt(data.total_suara_keseluruhan || 0).toLocaleString('id-ID');
-                        }
-
                         if (!data.data_eskul || data.data_eskul.length === 0) {
                             outputHtml = `
                                 <div class="card-modern text-center py-5">
@@ -256,7 +339,6 @@ $id_eskul_pilih = isset($_GET['id_eskul']) ? $_GET['id_eskul'] : 'all';
                                 </div>
                             `;
                         } else {
-                            // Pisahkan eskul yang punya kandidat vs belum punya
                             const eskulDenganKandidat = data.data_eskul.filter(e => e.kandidat && e.kandidat.length > 0);
                             const eskulTanpaKandidat = data.data_eskul.filter(e => !e.kandidat || e.kandidat.length === 0);
 
@@ -269,7 +351,6 @@ $id_eskul_pilih = isset($_GET['id_eskul']) ? $_GET['id_eskul'] : 'all';
                                     </div>
                                 `;
                             } else {
-                                // Tampilkan setiap eskul yang punya kandidat
                                 eskulDenganKandidat.forEach(eskul => {
                                     const totalEskul = parseInt(eskul.total_suara || 0);
                                     const maxSuara = Math.max(...eskul.kandidat.map(k => parseInt(k.perolehan || 0)));
@@ -283,7 +364,7 @@ $id_eskul_pilih = isset($_GET['id_eskul']) ? $_GET['id_eskul'] : 'all';
                                     });
 
                                     outputHtml += `
-                                        <div class="card-eskul-live">
+                                        <div class="card-eskul-live" id="eskul-box-${eskul.id_eskul}">
                                             <div class="card-eskul-header">
                                                 <div>
                                                     <h5 class="fw-bold text-dark m-0">
@@ -293,7 +374,7 @@ $id_eskul_pilih = isset($_GET['id_eskul']) ? $_GET['id_eskul'] : 'all';
                                                 </div>
                                                 <div class="text-end">
                                                     <span class="badge badge-soft-primary px-3 py-2 fs-6">
-                                                        <i class="fas fa-vote-yea me-1"></i> ${totalEskul.toLocaleString('id-ID')} Suara Masuk
+                                                        <i class="fas fa-vote-yea me-1"></i> <span id="eskul-total-val-${eskul.id_eskul}">${totalEskul.toLocaleString('id-ID')} Suara Masuk</span>
                                                     </span>
                                                 </div>
                                             </div>
@@ -305,7 +386,6 @@ $id_eskul_pilih = isset($_GET['id_eskul']) ? $_GET['id_eskul'] : 'all';
                                 });
                             }
 
-                            // Tampilkan info eskul yang belum ada kandidat di bagian bawah (jika ada)
                             if (eskulTanpaKandidat.length > 0) {
                                 let badgeList = eskulTanpaKandidat.map(e => `<span class="badge badge-light border text-muted py-2 px-3">${e.nama_eskul}</span>`).join(' ');
                                 outputHtml += `
@@ -316,13 +396,7 @@ $id_eskul_pilih = isset($_GET['id_eskul']) ? $_GET['id_eskul'] : 'all';
                                 `;
                             }
                         }
-
-                    // 2. JIKA MODE SATU ESKUL TERTENTU
                     } else {
-                        if (elTotal) {
-                            elTotal.innerText = parseInt(data.total_suara || 0).toLocaleString('id-ID');
-                        }
-
                         let candidatesHtml = '';
                         if (!data.kandidat || data.kandidat.length === 0) {
                             candidatesHtml = `
@@ -341,7 +415,7 @@ $id_eskul_pilih = isset($_GET['id_eskul']) ? $_GET['id_eskul'] : 'all';
                         }
 
                         outputHtml = `
-                            <div class="card-eskul-live">
+                            <div class="card-eskul-live" id="eskul-box-${data.id_eskul}">
                                 <div class="card-eskul-header">
                                     <div>
                                         <h5 class="fw-bold text-dark m-0">
@@ -351,7 +425,7 @@ $id_eskul_pilih = isset($_GET['id_eskul']) ? $_GET['id_eskul'] : 'all';
                                     </div>
                                     <div class="text-end">
                                         <span class="badge badge-soft-primary px-3 py-2 fs-6">
-                                            <i class="fas fa-vote-yea me-1"></i> ${(data.total_suara || 0).toLocaleString('id-ID')} Suara Masuk
+                                            <i class="fas fa-vote-yea me-1"></i> <span id="eskul-total-val-${data.id_eskul}">${(data.total_suara || 0).toLocaleString('id-ID')} Suara Masuk</span>
                                         </span>
                                     </div>
                                 </div>
@@ -363,6 +437,8 @@ $id_eskul_pilih = isset($_GET['id_eskul']) ? $_GET['id_eskul'] : 'all';
                     }
 
                     wadah.innerHTML = outputHtml;
+                    domInitialized = true;
+                    lastRenderMode = data.mode;
                 })
                 .catch(error => {
                     console.error("Gagal mengambil data real-time:", error);
