@@ -38,7 +38,7 @@ if (isset($_POST['tambah_kandidat']) && $id_eskul_pilih) {
     $ekstensi_gambar = strtolower(pathinfo($nama_file, PATHINFO_EXTENSION));
     $nama_file_baru = uniqid() . '.' . $ekstensi_gambar;
 
-    if (in_array($ekstensi_gambar, $ekstensi_valid) && $ukuran_file <= 2097152) {
+    if (in_array($ekstensi_gambar, $ekstensi_valid) && $ukuran_file <= 104857600) {
         if (!is_dir('../uploads')) {
             mkdir('../uploads', 0777, true);
         }
@@ -50,7 +50,7 @@ if (isset($_POST['tambah_kandidat']) && $id_eskul_pilih) {
             $pesan_notifikasi = "<script>var notification_type='error'; var notification_title='Informasi'; var notification_message='Gagal mengunggah file foto kandidat.';</script>";
         }
     } else {
-        $pesan_notifikasi = "<script>var notification_type='error'; var notification_title='Informasi'; var notification_message='Format foto harus JPG, JPEG, PNG, atau WEBP dan ukuran maksimal 2MB.';</script>";
+        $pesan_notifikasi = "<script>var notification_type='error'; var notification_title='Informasi'; var notification_message='Format foto harus JPG, JPEG, PNG, atau WEBP dan ukuran maksimal 100MB.';</script>";
     }
 }
 
@@ -73,7 +73,7 @@ if (isset($_POST['edit_kandidat'])) {
         $ekstensi_gambar = strtolower(pathinfo($nama_file, PATHINFO_EXTENSION));
         $ekstensi_valid = ['jpg', 'jpeg', 'png', 'webp'];
 
-        if (in_array($ekstensi_gambar, $ekstensi_valid) && $ukuran_file <= 2097152) {
+        if (in_array($ekstensi_gambar, $ekstensi_valid) && $ukuran_file <= 104857600) {
             $nama_file_baru = uniqid() . '.' . $ekstensi_gambar;
             move_uploaded_file($tmp_file, '../uploads/' . $nama_file_baru);
             
@@ -375,7 +375,7 @@ if ($id_eskul_pilih) {
                                 <div class="mb-3">
                                     <label class="form-label">Upload Foto Kandidat Resmi</label>
                                     <input type="file" name="foto" class="form-control" accept=".jpg, .jpeg, .png, .webp" required>
-                                    <small class="text-muted">Format: JPG, JPEG, PNG, WEBP. Maksimal 2MB. Disarankan foto berasio 1:1.</small>
+                                    <small class="text-muted">Format: JPG, JPEG, PNG, WEBP. Maksimal 100MB. Disarankan foto berasio 1:1.</small>
                                 </div>
                             </div>
                             <div class="modal-footer">
