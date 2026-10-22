@@ -294,10 +294,6 @@ $persentase_pemilih = ($total_siswa > 0) ? round(($siswa_sudah / $total_siswa) *
                                     <td class="fw-medium text-dark"><?= htmlspecialchars($log['aktivitas']); ?></td>
                                 </tr>
                             <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="4" class="text-center py-4 text-muted">Belum ada log aktivitas tercatat.</td>
-                            </tr>
                         <?php endif; ?>
                     </tbody>
                 </table>
@@ -376,6 +372,9 @@ $persentase_pemilih = ($total_siswa > 0) ? round(($siswa_sudah / $total_siswa) *
                     "search": "Cari Log:",
                     "lengthMenu": "Tampilkan _MENU_",
                     "info": "Menampilkan _START_ s/d _END_ dari _TOTAL_ log",
+                    "infoEmpty": "Total 0 log",
+                    "emptyTable": "Belum ada log aktivitas tercatat.",
+                    "zeroRecords": "Tidak ditemukan data yang cocok",
                     "paginate": { "next": "Lanjut", "previous": "Sebelum" }
                 },
                 "pageLength": 10,

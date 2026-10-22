@@ -333,10 +333,6 @@ if ($id_eskul_pilih) {
                                         </div>
                                     </div>
                                 <?php endforeach; ?>
-                            <?php else: ?>
-                                <tr>
-                                    <td colspan="6" class="text-center py-4 text-muted">Belum ada kandidat untuk ekstrakurikuler ini.</td>
-                                </tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
@@ -403,6 +399,9 @@ if ($id_eskul_pilih) {
                     "search": "Cari Kandidat:",
                     "lengthMenu": "Tampilkan _MENU_",
                     "info": "Total _TOTAL_ kandidat",
+                    "infoEmpty": "Total 0 kandidat",
+                    "emptyTable": "Belum ada kandidat untuk ekstrakurikuler ini.",
+                    "zeroRecords": "Tidak ditemukan data yang cocok",
                     "paginate": { "next": "Lanjut", "previous": "Sebelum" }
                 },
                 "pageLength": 10,

@@ -228,10 +228,6 @@ $data_eskul = $stmt_tampil->fetchAll();
                                     </div>
                                 </div>
                             <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="5" class="text-center py-4 text-muted">Belum ada data ekstrakurikuler.</td>
-                            </tr>
                         <?php endif; ?>
                     </tbody>
                 </table>
@@ -285,6 +281,9 @@ $data_eskul = $stmt_tampil->fetchAll();
                     "search": "Cari Eskul:",
                     "lengthMenu": "Tampilkan _MENU_",
                     "info": "Total _TOTAL_ eskul",
+                    "infoEmpty": "Total 0 eskul",
+                    "emptyTable": "Belum ada data ekstrakurikuler.",
+                    "zeroRecords": "Tidak ditemukan data yang cocok",
                     "paginate": { "next": "Lanjut", "previous": "Sebelum" }
                 },
                 "pageLength": 10,
