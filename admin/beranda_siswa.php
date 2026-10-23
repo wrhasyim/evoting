@@ -44,6 +44,7 @@ $stmt_hak_pilih = $pdo->prepare("
     FROM eskul e 
     WHERE e.status_aktif = 1 
     AND e.status_pemilihan = 1 
+    AND e.id_eskul IN (SELECT DISTINCT id_eskul FROM kandidat WHERE status_aktif = 1)
     AND e.id_eskul NOT IN (SELECT id_eskul FROM riwayat_pilih WHERE id_siswa = ?)
     AND (
         e.aturan_pemilih = 'semua_siswa' 
