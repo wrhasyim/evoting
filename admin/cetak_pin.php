@@ -24,6 +24,10 @@ if ($id_periode_aktif) {
     $daftar_semua_kelas = $stmt_k->fetchAll(PDO::FETCH_COLUMN);
 }
 
+// Hitung Jumlah Siswa PKL Aktif
+$stmt_pkl_c = $pdo->query("SELECT COUNT(*) FROM siswa WHERE status_aktif = 1 AND status_pkl = 1");
+$total_siswa_pkl = (int) $stmt_pkl_c->fetchColumn();
+
 // 3. Tangani Filter Kelas, Ukuran Kertas, Kapasitas, & Mode Lembar
 $filter_kelas = isset($_GET['kelas']) ? trim($_GET['kelas']) : 'all';
 $ukuran_kertas = isset($_GET['kertas']) && strtoupper($_GET['kertas']) === 'F4' ? 'F4' : 'A4';
@@ -125,14 +129,16 @@ if ($cards_per_page === 27) {
 
 // 4. Query Data Siswa
 $params = [];
-$query = "SELECT nis, nama_siswa, kelas, pin FROM siswa WHERE status_aktif = 1";
+$query = "SELECT nis, nama_siswa, kelas, pin, status_pkl, tempat_pkl FROM siswa WHERE status_aktif = 1";
 
 if ($id_periode_aktif) {
     $query .= " AND id_periode = ?";
     $params[] = $id_periode_aktif;
 }
 
-if ($filter_kelas !== '' && $filter_kelas !== 'all') {
+if ($filter_kelas === 'pkl') {
+    $query .= " AND status_pkl = 1";
+} elseif ($filter_kelas !== '' && $filter_kelas !== 'all') {
     $query .= " AND kelas = ?";
     $params[] = $filter_kelas;
 }
@@ -761,6 +767,7 @@ if ($mode_lembar === 'kelas') {
                     </label>
                     <select name="kelas" id="selectKelas" class="form-select-custom" onchange="this.form.submit()">
                         <option value="all" <?= $filter_kelas == 'all' ? 'selected' : ''; ?>>-- Semua Kelas --</option>
+                        <option value="pkl" <?= $filter_kelas == 'pkl' ? 'selected' : ''; ?> style="font-weight: bold; color: #d97706;">📍 KHUSUS SISWA SEDANG PKL (<?= $total_siswa_pkl; ?> Siswa)</option>
                         <?php foreach ($daftar_semua_kelas as $k): ?>
                             <option value="<?= htmlspecialchars($k); ?>" <?= $filter_kelas == $k ? 'selected' : ''; ?>>
                                 Kelas: <?= htmlspecialchars($k); ?>
@@ -875,6 +882,9 @@ if ($mode_lembar === 'kelas') {
                                         </div>
                                         <div class="info-col-kelas">
                                             <span class="badge-kelas-slip"><?= htmlspecialchars($s['kelas']); ?></span>
+                                            <?php if (!empty($s['status_pkl'])): ?>
+                                                <span style="display:inline-block; font-size: 0.38rem; background: #fef3c7; color: #92400e; border: 1px solid #fde68a; border-radius: 2px; padding: 0.5px 3px; font-weight: 800; margin-left: 2px;">PKL</span>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
                                 </div>

@@ -179,6 +179,11 @@ if ($id_periode_aktif) {
                         <i class="fas fa-print"></i> Cetak Token / PIN
                     </button>
 
+                    <!-- Tombol Data Token PKL -->
+                    <a href="cetak_rekap_pkl.php" target="_blank" class="btn btn-warning text-dark fw-bold">
+                        <i class="fas fa-briefcase me-1"></i> Data Token PKL (112)
+                    </a>
+
                     <!-- Tombol Daftar Hadir -->
                     <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalDaftarHadir">
                         <i class="fas fa-clipboard-check"></i> Daftar Hadir
@@ -225,6 +230,9 @@ if ($id_periode_aktif) {
                                     </td>
                                     <td>
                                         <span class="badge badge-soft-secondary font-monospace"><?= htmlspecialchars($row['kelas']); ?></span>
+                                        <?php if (!empty($row['status_pkl'])): ?>
+                                            <span class="badge bg-warning text-dark ms-1" title="<?= htmlspecialchars($row['tempat_pkl'] ?? 'Sedang PKL'); ?>"><i class="fas fa-briefcase me-1"></i>PKL</span>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
                                         <div class="d-flex align-items-center gap-1">
@@ -348,6 +356,7 @@ if ($id_periode_aktif) {
                             <label class="form-label fw-bold">Pilih Kategori Kelas</label>
                             <select name="kelas" class="form-select border-primary" id="modalSelectKelas">
                                 <option value="all">-- Cetak Semua Siswa (Dipisah per Halaman Kelas) --</option>
+                                <option value="pkl" style="font-weight: bold; color: #b45309;">📍 Khusus Siswa Sedang PKL (112 Siswa)</option>
                                 <?php foreach ($daftar_kelas_filter as $kls): ?>
                                     <option value="<?= htmlspecialchars($kls['kelas']); ?>">
                                         Khusus Kelas: <?= htmlspecialchars($kls['kelas']); ?>
