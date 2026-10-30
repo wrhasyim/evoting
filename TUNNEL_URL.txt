@@ -1,0 +1,14 @@
+=== CLOUDFLARE QUICK TUNNEL AKTIF ===
+Waktu Mulai: 2026-10-31 02:07:47
+
+LINK UTAMA:
+https://extras-sterling-ideas-contributing.trycloudflare.com
+
+LINK VOTING SISWA & GURU:
+https://extras-sterling-ideas-contributing.trycloudflare.com/evoting/
+
+LINK LIVE COUNT PUBLIK:
+https://extras-sterling-ideas-contributing.trycloudflare.com/evoting/live_count.php
+
+LINK ADMIN PANEL:
+https://extras-sterling-ideas-contributing.trycloudflare.com/evoting/admin/
